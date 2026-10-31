@@ -1,0 +1,104 @@
+# ==============================================================================
+# 📦 Dependency Directories
+# ==============================================================================
+node_modules/
+jspm_packages/
+web_modules/
+.pnpm-store/
+.yarn/
+
+# ==============================================================================
+# 🚀 Environment & Secret Files (CRITICAL)
+# ==============================================================================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+*.env.*
+.secrets
+**/.env
+**/.env.*
+
+# ==============================================================================
+# 🛠️ Build & Compilation Outputs (Express, React, NestJS, etc.)
+# ==============================================================================
+# Build folders for frontend (Vite/CRA) and backend compilation (TS)
+dist/
+build/
+out/
+.next/
+.nuxt/
+bin/
+obj/
+
+# TypeScript incremental compilation cache
+*.tsbuildinfo
+
+# ==============================================================================
+# 🗄️ Database & ORM (Drizzle Specifics)
+# ==============================================================================
+# DO NOT ignore your 'drizzle/' migration SQL files, as they belong in git.
+# Only ignore local SQLite DBs or temporary DB introspections if applicable.
+*.db
+*.db-journal
+*.sqlite
+.drizzle/
+
+# ==============================================================================
+# 🔴 Cache, Queues, & Key-Value Stores (Redis & BullMQ)
+# ==============================================================================
+# Redis dump files (if running local Redis instances that persist data)
+dump.rdb
+appendonly.aof
+*.rdb
+
+# BullMQ / Bull sandbox or dashboard temporary build files (if applicable)
+.bullmq/
+arena.json
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ==============================================================================
+# 💻 IDE, OS, & System Files
+# ==============================================================================
+# OS Files
+.DS_Store
+Thumbs.db
+*.icloud
+
+# IDEs and Editors
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ==============================================================================
+# 🧪 Testing & Coverage
+# ==============================================================================
+coverage/
+.nyc_output/
+.jest/
+cypress/videos/
+cypress/screenshots/
+.playwright/
+
+# ==============================================================================
+# 🐳 Docker (Optional but helpful for Microservices)
+# ==============================================================================
+# Ignore local data persistence folders for Docker containers (e.g., local Redis/Mongo volume data)
+.docker-data/
+postgres-data/
+mongo-data/
+redis-data/
