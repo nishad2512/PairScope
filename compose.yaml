@@ -9,5 +9,17 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+  auth-service:
+    build:
+      context: ./service/auth-service
+      dockerfile: Dockerfile
+    container_name: auth-service
+    environment:
+      DATABASE_URL: postgresql://pairscope:PairScope@postgres/auth
+    ports:
+      - "3001:3001"
+    depends_on:
+      - postgres
 volumes:
   postgres_data:
