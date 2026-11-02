@@ -2,10 +2,11 @@ import { eq } from "drizzle-orm";
 import { db } from "../config/db";
 import { IUserRepo } from "../interfaces/repo.interface";
 import { IUser, users } from "../models/User";
-import { RegisterInput } from "../validators/auth.validator";
+import { injectable } from "tsyringe";
 
+@injectable()
 export class UserRepository implements IUserRepo {
-    async createUser(user: RegisterInput): Promise<void> {
+    async createUser(user: IUser): Promise<void> {
         await db.insert(users).values(user);
     }
 

@@ -1,4 +1,6 @@
 import express from 'express';
+import 'reflect-metadata';
+import './utils/container';
 import { db } from './config/db';
 import { users } from './models/User';
 

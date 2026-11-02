@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    /* Target & Environment */
+    "target": "ES2022",                          /* Support modern Node.js (v18+) and modern browsers */
+    "module": "NodeNext",                        /* Best for modern ESM/CommonJS hybrid setups */
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],                           /* Standard library definitions */
+
+    /* Strict Type-Checking Options */
+    "strict": true,                              /* Enable all strict type-checking options */
+    "noImplicitAny": true,                       /* Raise error on expressions and declarations with an implied 'any' type */
+    "strictNullChecks": true,                    /* Enable strict null checks */
+    "strictFunctionTypes": true,                 /* Enable strict checking of function types */
+    "noImplicitThis": true,                      /* Raise error on 'this' expressions with an implied 'any' type */
+    "alwaysStrict": true,                        /* Parse in strict mode and emit "use strict" for each source file */
+
+    /* Linter-like Code Quality */
+    "noUnusedLocals": true,                      /* Report errors on unused locals */
+    "noUnusedParameters": true,                  /* Report errors on unused parameters */
+    "noImplicitReturns": true,                   /* Report error when not all code paths in function return a value */
+    "noFallthroughCasesInSwitch": true,           /* Report errors for fallthrough cases in switch statement */
+    "noUncheckedIndexedAccess": true,            /* Include 'undefined' in index signature results */
+
+    /* Module Interop & Compilation */
+    "esModuleInterop": true,                     /* Enables emit interoperability between CommonJS and ES Modules */
+    "skipLibCheck": true,                        /* Skip type checking of declaration files (*.d.ts) */
+    "forceConsistentCasingInFileNames": true,    /* Disallow inconsistently-cased references to the same file */
+    "resolveJsonModule": true,                   /* Allows importing .json files */
+    "sourceMap": true,                           /* Generates corresponding '.map' file for debugging */
+    
+    /* Experimental Features (Optional but useful for some ORMs/Containers) */
+    "experimentalDecorators": true,              /* Enables experimental support for ES7 decorators */
+    "emitDecoratorMetadata": true                /* Enables experimental support for emitting type metadata for decorators */
+  }
+}
