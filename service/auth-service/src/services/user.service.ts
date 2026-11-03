@@ -21,7 +21,7 @@ export class UserService {
             user.role as string,
         );
 
-        const refreshToken = this.tokenServ.generateRefreshToken(
+        const refreshToken = await this.tokenServ.generateRefreshToken(
             user.id!,
             randomUUID(),
         );
@@ -49,7 +49,7 @@ export class UserService {
         });
 
         const publicUser = toUserResponse(user);
-        const issuedTokens = this.issueTokens(user);
+        const issuedTokens = await this.issueTokens(user);
 
         return { user: publicUser, ...issuedTokens };
     }
