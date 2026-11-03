@@ -3,11 +3,16 @@ import { db } from "../config/db";
 import { IUserRepo } from "../interfaces/user.interface";
 import { IUser, users } from "../models/user.model";
 import { injectable } from "tsyringe";
+import AppError from "@/utils/AppError";
 
 @injectable()
 export class UserRepository implements IUserRepo {
-    async createUser(user: IUser): Promise<void> {
-        await db.insert(users).values(user);
+    async createUser(user: IUser): Promise<IUser> {
+        const [newUser] = await db.insert(users).values(user).returning();
+        if(!newUser) {
+            throw new AppError(503, "Database crashed")
+        }
+        return newUser;
     }
 
     async getUserById(id: string): Promise<IUser | null> {

@@ -7,11 +7,13 @@ export interface IUser {
     password: string,
     avatarUrl: string | null,
     role: "user" | "admin" | null,
+    tier: "free" | "paid" | null,
     createdAt?: Date,
     updatedAt?: Date
 }
 
 export const roleEnum = pgEnum("user_role", ["user", "admin"])
+export const tierEnum = pgEnum("user_tier", ["free", "paid"])
 
 export const users = pgTable("users", {
     id: uuid("id").primaryKey().defaultRandom(),
@@ -19,6 +21,7 @@ export const users = pgTable("users", {
     password: text("password").notNull(),
     displayName: text("display_name").notNull(),
     role: roleEnum().default("user"),
+    tier: tierEnum().default("free"),
     avatarUrl: text("avatar_url"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")

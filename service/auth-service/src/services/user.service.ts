@@ -3,10 +3,31 @@ import { IUserRepo } from "../interfaces/user.interface";
 import { LoginDTO, SignupDTO } from "@/validators/auth.validator";
 import AppError from "@/utils/AppError";
 import bcrypt from "bcrypt";
+import { toUserResponse } from "@/mappers/user.mapper";
+import { ITokenService } from "@/interfaces/refresh.interface";
+import { IUser } from "@/models/user.model";
+import { randomUUID } from "node:crypto";
 
 @injectable()
 export class UserService {
-    constructor(@inject('IUserRepo') private repo: IUserRepo) {};
+    constructor(
+        @inject("IUserRepo") private readonly repo: IUserRepo,
+        @inject("ITokenService") private readonly tokenServ: ITokenService,
+    ) {}
+
+    private async issueTokens(user: IUser) {
+        const accessToken = this.tokenServ.generateAccessToken(
+            user.id!,
+            user.role as string,
+        );
+
+        const refreshToken = this.tokenServ.generateRefreshToken(
+            user.id!,
+            randomUUID(),
+        );
+
+        return { accessToken, refreshToken };
+    }
 
     public async signup(dto: SignupDTO) {
         const email = dto.email.trim().toLowerCase();
@@ -23,13 +44,66 @@ export class UserService {
             password: passwordHash,
             email,
             role: "user",
-            avatarUrl: null
+            tier: "free",
+            avatarUrl: null,
         });
 
-        
+        const publicUser = toUserResponse(user);
+        const issuedTokens = this.issueTokens(user);
+
+        return { user: publicUser, ...issuedTokens };
     }
 
     public async login(dto: LoginDTO) {
-        return null;
+        const email = dto.email.trim().toLowerCase();
+        const user = await this.repo.getUserByEmail(email);
+        if (!user) {
+            throw new AppError(401, "Incorrect email or password");
+        }
+
+        const passwordCheck = await bcrypt.compare(dto.password, user.password);
+        if (!passwordCheck) {
+            throw new AppError(401, "Incorrect email or password");
+        }
+
+        const publicUser = toUserResponse(user);
+
+        const issuedTokens = await this.issueTokens(user);
+
+        return { user: publicUser, ...issuedTokens };
+    }
+
+    public async refresh(token: string) {
+        const payload = await this.tokenServ.verifyRefreshToken(token);
+
+        const user = await this.repo.getUserById(payload.userId);
+        if (!user) {
+            throw new AppError(401, "Invalid credentials");
+        }
+
+        const accessToken = this.tokenServ.generateAccessToken(
+            user.id!,
+            user.role as string,
+        );
+        const refreshToken = await this.tokenServ.rotateRefreshToken(
+            payload.currentTokenId,
+            randomUUID(),
+        );
+
+        return { accessToken, refreshToken }
+    }
+
+    public async logout(token: string) {
+        await this.tokenServ.revokeRefreshToken(token);
+    }
+
+    public async me(userId: string) {
+        const user = await this.repo.getUserById(userId);
+
+        if (!user) {
+            throw new AppError(404, "User not found");
+        }
+
+        return toUserResponse(user);
     }
 }
