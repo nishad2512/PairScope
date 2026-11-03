@@ -1,16 +1,17 @@
-import express from 'express';
-import 'reflect-metadata';
-import './utils/container';
-import { db } from './config/db';
-import { users } from './models/user.model';
+import express from "express";
+import "reflect-metadata";
+import "./utils/container";
+import authRoutes from "./routes/auth.routes";
+import userRoutes from "./routes/user.routes";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.get('/', async (req, res) => {
-    const allUsers = await db.select().from(users);
-    res.json(allUsers);
-});
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+
+app.use("/auth", authRoutes);
+app.use("/user", userRoutes);
 
 app.listen(PORT, () => {
     console.log(`Auth [rest] is running on port ${PORT}`);

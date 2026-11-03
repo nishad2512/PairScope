@@ -1,8 +1,9 @@
 import { Request, Response } from "express";
 import { UserService } from "@/services/user.service";
-import { inject } from "tsyringe";
+import { inject, injectable } from "tsyringe";
 import AppError from "@/utils/AppError";
 
+@injectable()
 export class AuthController {
     constructor(@inject("UserService") private readonly serv: UserService) {}
 
