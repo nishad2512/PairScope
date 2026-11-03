@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "../config/db";
-import { IUserRepo } from "../interfaces/repo.interface";
-import { IUser, users } from "../models/User";
+import { IUserRepo } from "../interfaces/user.interface";
+import { IUser, users } from "../models/user.model";
 import { injectable } from "tsyringe";
 
 @injectable()

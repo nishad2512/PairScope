@@ -2,7 +2,7 @@ import express from 'express';
 import 'reflect-metadata';
 import './utils/container';
 import { db } from './config/db';
-import { users } from './models/User';
+import { users } from './models/user.model';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
