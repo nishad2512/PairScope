@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node dist/server.js",
     "dev": "tsx src/server.ts",
-    "build": "tsc"
+    "build": "tsc && tsc-alias"
   },
   "keywords": [],
   "author": "Nishad MP",
@@ -20,6 +20,7 @@
     "@types/node": "^26.6.6",
     "@types/pg": "^8.23.1",
     "drizzle-kit": "^1.0.0-rc.5",
+    "tsc-alias": "^1.9.10",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   },

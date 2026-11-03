@@ -5,6 +5,8 @@ import rateLimit from "express-rate-limit";
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.set("trust proxy", 1);
+
 app.use(
     rateLimit({
         windowMs: 15 * 60 * 1000,
@@ -22,7 +24,7 @@ app.use(
 app.use(
     createProxyMiddleware({
         target: process.env.AUTH_SERVICE_URL ?? "http://localhost:3001",
-        pathFilter: "/api/auth",
+        pathFilter: "/api/auth/**",
         changeOrigin: true,
         pathRewrite: { "^/api": "" },
         proxyTimeout: 10_000,

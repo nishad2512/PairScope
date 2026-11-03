@@ -10,10 +10,20 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  api-gateway:
+    build:
+      context: .
+      dockerfile: ./service/api-gateway/Dockerfile
+    container_name: api-gateway
+    environment:
+      AUTH_SERVICE_URL: "http://auth-service:3001"
+    ports:
+      - "3000:3000"
+
   auth-service:
     build:
-      context: ./service/auth-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./service/auth-service/Dockerfile
     container_name: auth-service
     environment:
       DATABASE_URL: postgresql://pairscope:PairScope@postgres/auth
@@ -21,5 +31,6 @@ services:
       - "3001:3001"
     depends_on:
       - postgres
+
 volumes:
   postgres_data:
