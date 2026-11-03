@@ -27,6 +27,8 @@ services:
     container_name: auth-service
     environment:
       DATABASE_URL: postgresql://pairscope:PairScope@postgres/auth
+      ACCESS_SECRET: pairScopeAccessSecret
+      REFRESH_SECRET: pairScopeRefreshSecret
     ports:
       - "3001:3001"
     depends_on:

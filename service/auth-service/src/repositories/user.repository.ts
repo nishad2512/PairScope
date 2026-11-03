@@ -23,11 +23,7 @@ export class UserRepository implements IUserRepo {
             .where(eq(users.id, id))
             .limit(1);
 
-        if (!user) {
-            throw new AppError(StatusCode.NotFound, "User not found");
-        }
-
-        return user;
+        return user || null;
     }
 
     async getUserByEmail(email: string): Promise<IUser | null> {
@@ -37,11 +33,7 @@ export class UserRepository implements IUserRepo {
             .where(eq(users.email, email))
             .limit(1);
 
-        if (!user) {
-            throw new AppError(StatusCode.NotFound, "User not found");
-        }
-
-        return user;
+        return user || null;
     }
 
     async updateUser(id: string, user: any): Promise<void> {
