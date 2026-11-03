@@ -7,6 +7,7 @@ import { toUserResponse } from "@/mappers/user.mapper";
 import { ITokenService } from "@/interfaces/refresh.interface";
 import { IUser } from "@/models/user.model";
 import { randomUUID } from "node:crypto";
+import { StatusCode } from "@/utils/StatusEnum";
 
 @injectable()
 export class UserService {
@@ -34,7 +35,7 @@ export class UserService {
         const duplicate = await this.repo.getUserByEmail(email);
 
         if (duplicate) {
-            throw new AppError(409, "The user already exists");
+            throw new AppError(StatusCode.Conflict, "The user already exists");
         }
 
         const passwordHash = await bcrypt.hash(dto.password, 12);
@@ -58,12 +59,12 @@ export class UserService {
         const email = dto.email.trim().toLowerCase();
         const user = await this.repo.getUserByEmail(email);
         if (!user) {
-            throw new AppError(401, "Incorrect email or password");
+            throw new AppError(StatusCode.BadRequest, "Incorrect email or password");
         }
 
         const passwordCheck = await bcrypt.compare(dto.password, user.password);
         if (!passwordCheck) {
-            throw new AppError(401, "Incorrect email or password");
+            throw new AppError(StatusCode.BadRequest, "Incorrect email or password");
         }
 
         const publicUser = toUserResponse(user);
@@ -78,7 +79,7 @@ export class UserService {
 
         const user = await this.repo.getUserById(payload.userId);
         if (!user) {
-            throw new AppError(401, "Invalid credentials");
+            throw new AppError(StatusCode.BadRequest, "Invalid credentials");
         }
 
         const accessToken = this.tokenServ.generateAccessToken(
@@ -101,7 +102,7 @@ export class UserService {
         const user = await this.repo.getUserById(userId);
 
         if (!user) {
-            throw new AppError(404, "User not found");
+            throw new AppError(StatusCode.NotFound, "User not found");
         }
 
         return toUserResponse(user);

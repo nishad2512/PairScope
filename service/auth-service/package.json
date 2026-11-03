@@ -5,7 +5,7 @@
   "main": "src/server.ts",
   "scripts": {
     "start": "node dist/server.js",
-    "dev": "tsx",
+    "dev": "tsx src/server.ts",
     "build": "tsc"
   },
   "keywords": [],

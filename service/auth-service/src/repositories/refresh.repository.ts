@@ -1,6 +1,8 @@
 import { db } from "@/config/db";
 import { IRefreshRepository } from "@/interfaces/refresh.interface";
 import { IRefresh, refresh } from "@/models/refresh.model";
+import AppError from "@/utils/AppError";
+import { StatusCode } from "@/utils/StatusEnum";
 import { and, eq, isNull } from "drizzle-orm";
 import { injectable } from "tsyringe";
 
@@ -24,7 +26,7 @@ export class RefreshRepository implements IRefreshRepository {
             );
 
         if (!token) {
-            throw new Error("Token not found");
+            throw new AppError(StatusCode.NotFound, "Token not found");
         }
 
         return token;
@@ -42,7 +44,7 @@ export class RefreshRepository implements IRefreshRepository {
             );
 
         if (!token) {
-            throw new Error("Token not found");
+            throw new AppError(StatusCode.NotFound, "Token not found");
         }
 
         return token;

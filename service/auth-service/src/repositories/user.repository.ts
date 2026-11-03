@@ -4,13 +4,14 @@ import { IUserRepo } from "../interfaces/user.interface";
 import { IUser, users } from "../models/user.model";
 import { injectable } from "tsyringe";
 import AppError from "@/utils/AppError";
+import { StatusCode } from "@/utils/StatusEnum";
 
 @injectable()
 export class UserRepository implements IUserRepo {
     async createUser(user: IUser): Promise<IUser> {
         const [newUser] = await db.insert(users).values(user).returning();
         if(!newUser) {
-            throw new AppError(503, "Database crashed")
+            throw new AppError(StatusCode.InternalServerError, "Database crashed")
         }
         return newUser;
     }
@@ -23,7 +24,7 @@ export class UserRepository implements IUserRepo {
             .limit(1);
 
         if (!user) {
-            throw new Error("User not found");
+            throw new AppError(StatusCode.NotFound, "User not found");
         }
 
         return user;
@@ -37,7 +38,7 @@ export class UserRepository implements IUserRepo {
             .limit(1);
 
         if (!user) {
-            throw new Error("User not found");
+            throw new AppError(StatusCode.NotFound, "User not found");
         }
 
         return user;

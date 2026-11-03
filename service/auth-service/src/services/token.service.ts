@@ -8,6 +8,7 @@ import * as jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import AppError from "@/utils/AppError";
 import { inject, injectable } from "tsyringe";
+import { StatusCode } from "@/utils/StatusEnum";
 
 @injectable()
 export class TokenService implements ITokenService {
@@ -51,7 +52,7 @@ export class TokenService implements ITokenService {
     ) {
         const tokenFamily = await this.repo.findByTokenId(currentTokenId);
         if (!tokenFamily) {
-            throw new AppError(401, "Invalid Credentials");
+            throw new AppError(StatusCode.BadRequest, "Invalid Credentials");
         }
 
         const token = jwt.sign(
@@ -96,7 +97,7 @@ export class TokenService implements ITokenService {
             );
 
             if (!isMatch) {
-                throw new AppError(400, "Invalid Token");
+                throw new AppError(StatusCode.BadRequest, "Invalid Token");
             }
 
             return payload as RefreshPayload;
@@ -108,12 +109,12 @@ export class TokenService implements ITokenService {
         if (consumed) {
             await this.repo.revokeById(consumed.id!);
             throw new AppError(
-                401,
+                StatusCode.Forbidden,
                 "Security violation detected. Please re-authenticate.",
             );
         }
 
-        throw new AppError(401, "Invalid token");
+        throw new AppError(StatusCode.BadRequest, "Invalid token");
     }
 
     public async revokeRefreshToken(token: string): Promise<void> {
