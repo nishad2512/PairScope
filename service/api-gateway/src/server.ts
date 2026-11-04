@@ -1,6 +1,7 @@
-import express from "express";
+import express, { Request } from "express";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import rateLimit from "express-rate-limit";
+import { verifyUser } from "./middlewares/auth.middleware";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -29,6 +30,30 @@ app.use(
         pathRewrite: { "^/api": "" },
         proxyTimeout: 10_000,
         timeout: 10_000,
+    }),
+);
+
+app.use(
+    verifyUser,
+    createProxyMiddleware({
+        target: process.env.AUTH_SERVICE_URL ?? "http://localhost:3001",
+        pathFilter: "/api/user/**",
+        changeOrigin: true,
+        pathRewrite: { "^/api": "" },
+        proxyTimeout: 10_000,
+        timeout: 10_000,
+        on: {
+            proxyReq: (proxyReq, req: Request, _res) => {
+                proxyReq.removeHeader("x-user-payload");
+
+                if (req.user) {
+                    proxyReq.setHeader(
+                        "x-user-payload",
+                        JSON.stringify(req.user),
+                    );
+                }
+            },
+        },
     }),
 );
 

@@ -3,12 +3,14 @@ import { UserService } from "@/services/user.service";
 import { inject, injectable } from "tsyringe";
 import AppError from "@/utils/AppError";
 
+const REFRESH_COOKIE_NAME = "pairscope_refresh";
+
 @injectable()
 export class AuthController {
     constructor(@inject("UserService") private readonly serv: UserService) {}
 
     private setRefreshToken(res: Response, token: string) {
-        res.cookie("pairscope_refresh", token, {
+        res.cookie(REFRESH_COOKIE_NAME, token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             sameSite: "strict",
@@ -37,7 +39,7 @@ export class AuthController {
     }
 
     public async refresh(req: Request, res: Response) {
-        const token = req.cookies.pairscope_refresh;
+        const token = req.cookies[REFRESH_COOKIE_NAME];
         if (!token) {
             throw new AppError(401, "Token not provided");
         }
@@ -49,12 +51,12 @@ export class AuthController {
     }
 
     public async logout(req: Request, res: Response) {
-        const token = req.cookies.pairscope_refresh;
+        const token = req.cookies[REFRESH_COOKIE_NAME];
         if(!token) {
             throw new AppError(401, "Token not provided")
         }
         await this.serv.logout(token);
-        res.clearCookie('refreshToken');
+        res.clearCookie(REFRESH_COOKIE_NAME);
 
         res.status(200).json({ success: true });
     }

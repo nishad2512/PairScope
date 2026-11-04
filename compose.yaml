@@ -17,6 +17,7 @@ services:
     container_name: api-gateway
     environment:
       AUTH_SERVICE_URL: "http://auth-service:3001"
+      ACCESS_SECRET: pairScopeAccessSecret
     ports:
       - "3000:3000"
 
