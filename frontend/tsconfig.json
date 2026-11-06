@@ -1,0 +1,24 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    /* Environment & Bundler Overrides */
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    
+    /* Build & Compilation Flags */
+    "noEmit": true,
+    "useDefineForClassFields": true,
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+
+    /* Types & Path Aliases */
+    "types": ["vite/client", "node"],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src", "vite.config.ts"]
+}
