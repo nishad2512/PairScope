@@ -1,0 +1,12 @@
+{
+  "name": "session-service",
+  "version": "1.0.0",
+  "description": "Session service for managing sessions, and invitations.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Nishad MP",
+  "license": "ISC"
+}
