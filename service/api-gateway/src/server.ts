@@ -2,11 +2,14 @@ import express, { Request } from "express";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import rateLimit from "express-rate-limit";
 import { verifyUser } from "./middlewares/auth.middleware";
+import morgan from "morgan";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.set("trust proxy", 1);
+
+app.use(morgan("dev"));
 
 app.use(
     rateLimit({
