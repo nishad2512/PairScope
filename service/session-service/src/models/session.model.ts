@@ -10,6 +10,7 @@ export interface ISession {
     language: string;
     questionId: string | null;
     status: "SCHEDULED" | "LIVE" | "COMPLETED" | "CANCELLED" | "EXPIRED";
+    scheduledAt?: Date | null;
     startedAt?: Date | null;
     endedAt?: Date | null;
     endedBy?: string | null;
@@ -49,6 +50,7 @@ export const sessions = pgTable("session", {
     language: text("language").notNull(),
     questionId: uuid(),
     status: statusEnum().notNull(),
+    scheduledAt: timestamp("scheduled_at"),
     startedAt: timestamp("started_at"),
     endedAt: timestamp("ended_at"),
     endedBy: uuid(),
