@@ -10,6 +10,10 @@ const controller = container.resolve(SessionController);
 
 router.use(getUser);
 
-router.post("/", validate(createSessionSchema), controller.create.bind(controller));
+router.post(
+    "/",
+    validate(createSessionSchema),
+    controller.create.bind(controller),
+);
 
 export default router;

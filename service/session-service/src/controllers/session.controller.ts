@@ -5,10 +5,15 @@ import { StatusCode } from "@/utils/StatusEnum";
 
 @injectable()
 export class SessionController {
-    constructor(@inject("SessionService") private readonly service: SessionService) {}
+    constructor(
+        @inject("SessionService") private readonly service: SessionService,
+    ) {}
 
     public create = async (req: Request, res: Response): Promise<void> => {
-        const session = await this.service.create(req.body, req.user!.userId);
+        const { session, participant } = await this.service.create(
+            req.body,
+            req.user!.userId,
+        );
 
         res.status(StatusCode.Created).json({
             data: {
@@ -21,6 +26,9 @@ export class SessionController {
                 scheduledAt: session.scheduledAt ?? null,
                 startedAt: session.startedAt ?? null,
                 expiresAt: session.expiresAt ?? null,
+                participantId: participant.id,
+                participantDisplayName: participant.displayName,
+                participantRole: participant.role.toLowerCase(),
             },
         });
     };
