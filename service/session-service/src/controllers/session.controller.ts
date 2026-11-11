@@ -32,4 +32,31 @@ export class SessionController {
             },
         });
     };
+
+    public getAllForUser = async (
+        req: Request,
+        res: Response,
+    ): Promise<void> => {
+        const sessions = await this.service.getForUser(req.user!.userId);
+
+        res.status(StatusCode.Ok).json({
+            data: sessions.map((session) => ({
+                id: session.id,
+                title: session.title,
+                description: session.description,
+                language: session.language,
+                sessionType: session.sessionType.toLowerCase(),
+                status: session.status.toLowerCase(),
+                ownerId: session.creatorId,
+                orgId: session.orgId,
+                questionId: session.questionId,
+                scheduledAt: session.scheduledAt ?? null,
+                startedAt: session.startedAt ?? null,
+                endedAt: session.endedAt ?? null,
+                expiresAt: session.expiresAt ?? null,
+                createdAt: session.createdAt,
+                updatedAt: session.updatedAt,
+            })),
+        });
+    };
 }

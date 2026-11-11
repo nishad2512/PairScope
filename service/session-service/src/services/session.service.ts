@@ -1,14 +1,14 @@
 import { db } from "@/config/db";
-import { ISessionRepository } from "@/interfaces/session.interface";
 import { ParticipantRepository } from "@/repositories/participant.repository";
+import { SessionRepository } from "@/repositories/session.repository";
 import { CreateSessionDTO } from "@/validators/session.validator";
 import { inject, injectable } from "tsyringe";
 
 @injectable()
 export class SessionService {
     constructor(
-        @inject("ISessionRepository") private readonly repo: ISessionRepository,
-        private readonly participantRepo: ParticipantRepository,
+        @inject("ISessionRepository") private readonly repo: SessionRepository,
+        @inject("ParticipantRepository") private readonly participantRepo: ParticipantRepository,
     ) {}
 
     async create(dto: CreateSessionDTO, userId: string) {
@@ -42,5 +42,9 @@ export class SessionService {
             );
             return { session, participant };
         });
+    }
+
+    async getForUser(userId: string) {
+        return this.repo.getSessionsForUser(userId);
     }
 }

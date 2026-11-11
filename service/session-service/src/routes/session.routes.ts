@@ -10,6 +10,7 @@ const controller = container.resolve(SessionController);
 
 router.use(getUser);
 
+router.get("/", controller.getAllForUser.bind(controller));
 router.post(
     "/",
     validate(createSessionSchema),
