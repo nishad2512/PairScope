@@ -8,6 +8,8 @@ RUN npm ci
 COPY service/auth-service/. ./
 COPY tsconfig.base.json /tsconfig.base.json
 
+COPY proto ./proto
+
 RUN npm run build
 
 
@@ -19,7 +21,9 @@ COPY service/auth-service/package*.json ./
 RUN npm ci --omit=dev
 
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/proto ./proto
 
 EXPOSE 3001
+EXPOSE 50051
 
 CMD ["npm", "start"]

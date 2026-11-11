@@ -107,4 +107,10 @@ export class UserService {
 
         return toUserResponse(user);
     }
+
+    public async getUser(email: string) {
+        const user = await this.repo.getUserByEmail(email);
+
+        return user;
+    }
 }

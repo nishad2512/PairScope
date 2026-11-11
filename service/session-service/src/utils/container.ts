@@ -4,8 +4,10 @@ import { SessionRepository } from "@/repositories/session.repository";
 import { ParticipantRepository } from "@/repositories/participant.repository";
 import { SessionService } from "@/services/session.service";
 import { container } from "tsyringe";
+import { InvitationRepository } from "@/repositories/invitation.repository";
 
 container.registerSingleton("ParticipantRepository", ParticipantRepository);
+container.registerSingleton("InvitationRepository", InvitationRepository)
 container.registerSingleton<ISessionRepository>(
     "ISessionRepository",
     SessionRepository,

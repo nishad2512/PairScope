@@ -8,6 +8,8 @@ RUN npm ci
 COPY service/session-service/. ./
 COPY tsconfig.base.json /tsconfig.base.json
 
+COPY proto ./proto
+
 RUN npm run build
 
 FROM node:22-alpine
@@ -18,6 +20,7 @@ COPY service/session-service/package*.json ./
 RUN npm ci --omit=dev
 
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/proto ./proto
 
 EXPOSE 3002
 

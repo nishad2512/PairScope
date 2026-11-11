@@ -2,7 +2,9 @@ import { ISessionParticipant, participants } from "@/models/participant.model";
 import { Transaction } from "@/types/database.types";
 import AppError from "@/utils/AppError";
 import { StatusCode } from "@/utils/StatusEnum";
+import { injectable } from "tsyringe";
 
+@injectable()
 export class ParticipantRepository {
     async createParticipant(
         tx: Transaction,

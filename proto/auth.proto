@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package auth;
+
+service AuthService {
+    rpc GetUserData (GetUserDataRequest) returns (UserData);
+}
+
+message GetUserDataRequest {
+    string email = 1;
+}
+
+message UserData {
+    string id = 1;
+    string displayName = 2;
+    string email = 3;
+    string avatarUrl = 4;
+    string role = 5;
+    string tier = 6;
+}

@@ -59,4 +59,22 @@ export class SessionController {
             })),
         });
     };
+
+    public createInvite = async (
+        req: Request,
+        res: Response,
+    ): Promise<void> => {
+        const userId = req.user!.userId;
+        const sessionId = req.params.sessionId;
+
+        const result = await this.service.createInvitation(
+            req.body,
+            userId,
+            sessionId as string,
+        );
+
+        res.status(StatusCode.Created).json({
+            data: result
+        })
+    };
 }

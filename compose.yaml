@@ -41,6 +41,7 @@ services:
       REFRESH_SECRET: pairScopeRefreshSecret
     ports:
       - "3001:3001"
+      - "50051:50051"
     depends_on:
       - postgres
 
@@ -51,6 +52,7 @@ services:
     container_name: session-service
     environment:
       DATABASE_URL: postgresql://pairscope:PairScope@postgres/session
+      GRPC_AUTH_URL: "auth-service:50051"
     ports:
       - "3002:3002"
     depends_on:
