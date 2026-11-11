@@ -19,7 +19,26 @@ export const createSessionSchema = z
         questionId: z.uuid().nullable().optional(),
 
         scheduledAt: z.coerce.date().nullable().optional(),
+
+        expiresAt: z.coerce.date().nullable().optional(),
     })
-    .strict();
+    .strict()
+    .refine(
+        ({ scheduledAt }) =>
+            scheduledAt == null || scheduledAt.getTime() > Date.now(),
+        {
+            message: "Scheduled time must be in the future",
+            path: ["scheduledAt"],
+        },
+    )
+    .refine(
+        ({ expiresAt, scheduledAt }) =>
+            expiresAt == null ||
+            expiresAt.getTime() > (scheduledAt?.getTime() ?? Date.now()),
+        {
+            message: "Expiration time must be after the scheduled time",
+            path: ["expiresAt"],
+        },
+    );
 
 export type CreateSessionDTO = z.infer<typeof createSessionSchema>;

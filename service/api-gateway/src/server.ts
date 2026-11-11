@@ -60,6 +60,30 @@ app.use(
     }),
 );
 
+app.use(
+    verifyUser,
+    createProxyMiddleware({
+        target: process.env.SESSION_SERVICE_URL ?? "http://localhost:3002",
+        pathFilter: "/api/sessions/**",
+        changeOrigin: true,
+        pathRewrite: { "^/api": "" },
+        proxyTimeout: 10_000,
+        timeout: 10_000,
+        on: {
+            proxyReq: (proxyReq, req: Request, _res) => {
+                proxyReq.removeHeader("x-user-payload");
+
+                if (req.user) {
+                    proxyReq.setHeader(
+                        "x-user-payload",
+                        JSON.stringify(req.user),
+                    );
+                }
+            },
+        },
+    }),
+);
+
 app.listen(PORT, () => {
     console.log(`Api Gateway running on port ${PORT}`);
 });

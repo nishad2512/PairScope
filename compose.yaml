@@ -9,6 +9,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pairscope"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   api-gateway:
     build:
@@ -17,9 +22,13 @@ services:
     container_name: api-gateway
     environment:
       AUTH_SERVICE_URL: "http://auth-service:3001"
+      SESSION_SERVICE_URL: "http://session-service:3002"
       ACCESS_SECRET: pairScopeAccessSecret
     ports:
       - "3000:3000"
+    depends_on:
+      - auth-service
+      - session-service
 
   auth-service:
     build:
@@ -32,6 +41,18 @@ services:
       REFRESH_SECRET: pairScopeRefreshSecret
     ports:
       - "3001:3001"
+    depends_on:
+      - postgres
+
+  session-service:
+    build:
+      context: .
+      dockerfile: ./service/session-service/Dockerfile
+    container_name: session-service
+    environment:
+      DATABASE_URL: postgresql://pairscope:PairScope@postgres/session
+    ports:
+      - "3002:3002"
     depends_on:
       - postgres
 

@@ -4,7 +4,11 @@
   "description": "Session service for managing sessions, and invitations.",
   "main": "index.js",
   "scripts": {
-    "build": "tsc && tsc-alias"
+    "build": "tsc && tsc-alias",
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
   },
   "keywords": [],
   "author": "Nishad MP",
@@ -15,6 +19,7 @@
     "drizzle-orm": "^0.45.4",
     "express": "^5.3.0",
     "pg": "^8.23.1",
+    "reflect-metadata": "^0.2.2",
     "tsyringe": "^4.10.0",
     "zod": "^4.6.7"
   },

@@ -108,25 +108,32 @@ Not every code applies to every endpoint. A read endpoint normally does not retu
 ```json
 {
   "title": "Array debugging interview",
+  "description": "Review array operations",
+  "sessionType": "INTERVIEW",
   "language": "javascript",
-  "visibility": "invite_only",
-  "settings": {"allowBranching": true, "recordSession": true}
+  "orgId": null,
+  "questionId": null,
+  "scheduledAt": null
 }
 ```
 Expected `201 Created`:
 ```json
 {
   "data": {
-    "id": "ses_123",
+    "id": "00000000-0000-4000-8000-000000000001",
     "title": "Array debugging interview",
     "language": "javascript",
-    "status": "scheduled",
-    "ownerId": "usr_123",
-    "createdAt": "2026-10-28T05:40:00Z"
-  },
-  "meta": {"requestId": "req_10"}
+    "status": "live",
+    "ownerId": "00000000-0000-4000-8000-000000000002",
+    "createdAt": "2026-10-28T05:40:00.000Z",
+    "scheduledAt": null
+  }
 }
 ```
+
+`sessionType` must be `INTERVIEW` or `COLLABORATION`. `scheduledAt`, when
+provided, must be a future timestamp; scheduled sessions are created with
+`scheduled` status. Without it, a session is created with `live` status.
 
 ### Submit JavaScript execution
 `POST {{baseUrl}}/api/v1/sessions/{{sessionId}}/executions`
