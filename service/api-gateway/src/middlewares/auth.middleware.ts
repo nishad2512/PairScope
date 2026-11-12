@@ -1,6 +1,7 @@
 import * as jwt from "jsonwebtoken";
 import { Request, Response, NextFunction } from "express";
 import { StatusCode } from "@/utils/StatusEnum";
+import { AccessPayload } from "@/interfaces/token.interface";
 
 export const verifyUser = async (
     req: Request,
@@ -23,11 +24,25 @@ export const verifyUser = async (
             process.env.ACCESS_SECRET!,
         );
 
-        req.user = decodedPayload;
+        req.user = decodedPayload as AccessPayload;
         console.log(req.user);
 
         return next();
     } catch (error) {
         return res.status(401).json({ message: "Invalid or Expired Token" });
     }
+};
+
+export const requireRegister = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+) => {
+    if (req.user?.sessionId) {
+        return res
+            .status(StatusCode.Unauthorized)
+            .json({ message: "Access Denied: Guest User Restricted" });
+    }
+
+    return next();
 };

@@ -16,6 +16,16 @@ export class TokenService implements ITokenService {
         @inject("IRefreshRepository") private readonly repo: IRefreshRepository,
     ) {}
 
+    public generateGuestToken(partId: string, sessionId: string, role: string) {
+        return jwt.sign(
+            { userId: partId, role, sessionId },
+            process.env.ACCESS_SECRET!,
+            {
+                expiresIn: "8h",
+            },
+        );
+    }
+
     public generateAccessToken(userId: string, role: string) {
         return jwt.sign({ userId, role }, process.env.ACCESS_SECRET!, {
             expiresIn: "15m",

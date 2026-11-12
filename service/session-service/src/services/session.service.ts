@@ -1,35 +1,18 @@
 import { db } from "@/config/db";
-import createGrpcClient from "@/grpc/client";
 import { InvitationRepository } from "@/repositories/invitation.repository";
 import { ParticipantRepository } from "@/repositories/participant.repository";
 import { SessionRepository } from "@/repositories/session.repository";
 import AppError from "@/utils/AppError";
 import { StatusCode } from "@/utils/StatusEnum";
-import { CreateInviteDTO } from "@/validators/invite.validator";
+import { CreateInviteDTO, JoinInviteDTO } from "@/validators/invite.validator";
 import { CreateSessionDTO } from "@/validators/session.validator";
-import { randomBytes } from "node:crypto";
-import bcrypt from "bcrypt";
+import { createHash, randomBytes } from "node:crypto";
 import { inject, injectable } from "tsyringe";
+import { getUserData, setGuestUser } from "./grpc.service";
 
-const authClient = createGrpcClient(
-    "proto/auth.proto",
-    "auth.AuthService",
-    process.env.GRPC_AUTH_URL ?? "auth-service:50051",
-) as any;
-
-const getUserData = (email: string) =>
-    new Promise((resolve, reject) => {
-        authClient.GetUserData({ email }, (error: any, user: any) =>
-            error
-                ? reject(
-                      new AppError(
-                          StatusCode.InternalServerError,
-                          `There seems a error in getting the user`,
-                      ),
-                  )
-                : resolve(user),
-        );
-    });
+function hashToken(token: string) {
+    return createHash("sha256").update(token).digest("hex");
+}
 
 @injectable()
 export class SessionService {
@@ -93,7 +76,7 @@ export class SessionService {
         const status = "PENDING";
 
         const token = randomBytes(32).toString("hex");
-        const tokenHash = await bcrypt.hash(token, 12);
+        const tokenHash = hashToken(token);
 
         const invitation = await this.inviteRepo.createInvite({
             invitedBy: invitor,
@@ -107,5 +90,47 @@ export class SessionService {
         });
 
         return { invitation, token };
+    }
+
+    async joinInvitation(dto: JoinInviteDTO, token: string) {
+        const tokenHash = hashToken(token);
+        const result = await db.transaction(async (tx) => {
+            const invite = await this.inviteRepo.findInviteByToken(
+                tx,
+                tokenHash,
+            );
+
+            if (!invite) {
+                throw new AppError(
+                    StatusCode.BadRequest,
+                    "Invalid invitation token",
+                );
+            }
+
+            const participant = await this.participantRepo.createParticipant(
+                tx,
+                {
+                    displayName: dto.name,
+                    role: invite?.role,
+                    sessionId: invite?.sessionId,
+                    userId: invite?.invitedUserId,
+                },
+            );
+
+            return { ...participant };
+        });
+
+        if (!result.userId) {
+            const data = await setGuestUser(
+                result.id as string,
+                result.sessionId,
+                result.role,
+            );
+
+            console.log("auth service result: ", data);
+            return { result, data };
+        }
+
+        return result;
     }
 }

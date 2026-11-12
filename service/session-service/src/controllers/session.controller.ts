@@ -74,7 +74,17 @@ export class SessionController {
         );
 
         res.status(StatusCode.Created).json({
-            data: result
-        })
+            data: result,
+        });
+    };
+
+    public joinInvite = async (req: Request, res: Response): Promise<void> => {
+        const token = req.params.token;
+        const result = await this.service.joinInvitation(
+            req.body,
+            token as string,
+        );
+
+        res.status(StatusCode.Ok).json({ data: result });
     };
 }
