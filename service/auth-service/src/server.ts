@@ -40,12 +40,12 @@ function startServer() {
         console.log(`Auth [rest] is running on port ${PORT}`);
     });
 
-
     const grpcServer = new grpc.Server();
     const grpcController = container.resolve(GrpcController);
 
     grpcServer.addService(authService.service, {
         GetUserData: grpcController.getUserData.bind(grpcController),
+        SetGuestUser: grpcController.setGuestUser.bind(grpcController),
     });
 
     grpcServer.bindAsync(

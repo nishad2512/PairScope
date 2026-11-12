@@ -32,7 +32,7 @@ export class GrpcController {
                 call.request.role,
             );
 
-            callback(null, result);
+            callback(null, { token: result });
         } catch (err: any) {
             console.error(err.message);
             callback({

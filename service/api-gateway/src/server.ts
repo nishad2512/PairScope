@@ -73,11 +73,11 @@ app.use(
 )
 
 app.use(
+    "/api/sessions",
     verifyUser,
     requireRegister,
     createProxyMiddleware({
         target: process.env.SESSION_SERVICE_URL ?? "http://localhost:3002",
-        pathFilter: "/api/sessions/**",
         changeOrigin: true,
         pathRewrite: { "^/api": "" },
         proxyTimeout: 10_000,

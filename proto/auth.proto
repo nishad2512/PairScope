@@ -4,6 +4,7 @@ package auth;
 
 service AuthService {
     rpc GetUserData (GetUserDataRequest) returns (UserData);
+    rpc SetGuestUser (GuestRequest) returns (GuestData);
 }
 
 message GetUserDataRequest {
@@ -17,4 +18,14 @@ message UserData {
     string avatarUrl = 4;
     string role = 5;
     string tier = 6;
+}
+
+message GuestRequest {
+  string partId = 1;
+  string sessionId = 2;
+  string role = 3;
+}
+
+message GuestData {
+  string token = 1;
 }
