@@ -21,14 +21,13 @@ export async function apiRequest<T>(
   path: string,
   init: RequestInit = {},
 ): Promise<T> {
+  const headers = new Headers(init.headers);
+  headers.set("Accept", "application/json");
+  if (init.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     credentials: "include",
-    headers: {
-      Accept: "application/json",
-      ...(init.body ? { "Content-Type": "application/json" } : {}),
-      ...init.headers,
-    },
+    headers,
   });
 
   if (!response.ok) {
@@ -43,5 +42,14 @@ export async function apiRequest<T>(
   }
 
   if (response.status === 204) return undefined as T;
-  return (await response.json()) as T;
+  try {
+    return (await response.json()) as T;
+  } catch {
+    throw new ApiError("The server returned an unexpected response.", 502);
+  }
+}
+
+export function errorMessage(error: unknown) {
+  if (error instanceof ApiError) return error.message;
+  return "Could not complete the request. Check your connection and try again.";
 }
