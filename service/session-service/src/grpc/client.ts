@@ -1,5 +1,6 @@
-import grpc, { type ServiceClientConstructor } from "@grpc/grpc-js";
-import protoLoader from "@grpc/proto-loader";
+import * as grpc from "@grpc/grpc-js";
+import { type ServiceClientConstructor } from "@grpc/grpc-js";
+import * as protoLoader from "@grpc/proto-loader";
 import path from "path";
 
 const loaderOptions = {
@@ -36,4 +37,4 @@ function createGrpcClient(
     return new ClientConstructor(address, grpc.credentials.createInsecure());
 }
 
-export default createGrpcClient
+export default createGrpcClient;
