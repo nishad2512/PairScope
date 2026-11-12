@@ -69,7 +69,7 @@ export class SessionService {
         let userId = null;
         if (dto.email) {
             const user = (await getUserData(dto.email)) as any;
-            userId = user.id;
+            userId = user?.id || null;
         }
 
         const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
@@ -92,7 +92,7 @@ export class SessionService {
         return { invitation, token };
     }
 
-    async joinInvitation(dto: JoinInviteDTO, token: string) {
+    async joinInvitation(dto: JoinInviteDTO, token: string, userId: string | null) {
         const tokenHash = hashToken(token);
         const result = await db.transaction(async (tx) => {
             const invite = await this.inviteRepo.findInviteByToken(
@@ -129,7 +129,14 @@ export class SessionService {
 
             console.log("auth service result: ", data);
             return { result, data };
+        } else if (result.userId && !userId) {
+            throw new AppError(
+                StatusCode.BadRequest,
+                "Registered User: please login",
+            );
         }
+
+        // validation check: whether 2 of the userId's are same or not.
 
         return result;
     }

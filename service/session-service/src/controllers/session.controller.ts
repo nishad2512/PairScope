@@ -83,6 +83,7 @@ export class SessionController {
         const result = await this.service.joinInvitation(
             req.body,
             token as string,
+            req.user?.userId || null
         );
 
         res.status(StatusCode.Ok).json({ data: result });

@@ -8,8 +8,6 @@ import { createSessionSchema } from "@/validators/session.validator";
 const router = Router();
 const controller = container.resolve(SessionController);
 
-router.post("/join/:token", controller.joinInvite.bind(controller));
-
 router.use(getUser);
 
 router.get("/", controller.getAllForUser.bind(controller));
@@ -19,6 +17,7 @@ router.post(
     controller.create.bind(controller),
 );
 router.post("/:sessionId/invite", controller.createInvite.bind(controller));
+router.post("/join/:token", controller.joinInvite.bind(controller));
 
 export default router;
 

@@ -1,7 +1,11 @@
 import express, { Request } from "express";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import rateLimit from "express-rate-limit";
-import { requireRegister, verifyUser } from "./middlewares/auth.middleware";
+import {
+    optionalAuth,
+    requireRegister,
+    verifyUser,
+} from "./middlewares/auth.middleware";
 import morgan from "morgan";
 
 const app = express();
@@ -36,9 +40,9 @@ app.use(
     }),
 );
 
+app.use("/api/user", verifyUser, requireRegister);
+
 app.use(
-    verifyUser,
-    requireRegister,
     createProxyMiddleware({
         target: process.env.AUTH_SERVICE_URL ?? "http://localhost:3001",
         pathFilter: "/api/user/**",
@@ -62,6 +66,7 @@ app.use(
 );
 
 app.use(
+    optionalAuth,
     createProxyMiddleware({
         target: process.env.SESSION_SERVICE_URL ?? "http://localhost:3002",
         pathFilter: "/api/sessions/join/**",
@@ -79,7 +84,7 @@ app.use(
     createProxyMiddleware({
         target: process.env.SESSION_SERVICE_URL ?? "http://localhost:3002",
         changeOrigin: true,
-        pathRewrite: { "^/api": "" },
+        pathRewrite: (path) => `/sessions${path}`,
         proxyTimeout: 10_000,
         timeout: 10_000,
         on: {

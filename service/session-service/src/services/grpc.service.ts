@@ -9,15 +9,10 @@ const authClient = createGrpcClient(
 ) as any;
 
 export const getUserData = (email: string) =>
-    new Promise((resolve, reject) => {
+    new Promise((resolve, _reject) => {
         authClient.GetUserData({ email }, (error: any, user: any) =>
             error
-                ? reject(
-                      new AppError(
-                          StatusCode.InternalServerError,
-                          `There seems a error in getting the user`,
-                      ),
-                  )
+                ? resolve(console.log(error))
                 : resolve(user),
         );
     });
