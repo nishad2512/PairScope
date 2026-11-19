@@ -12,7 +12,8 @@ router.use(getUser);
 
 router.post("/", validate(createOrgSchema), controller.create.bind(controller));
 router.get("/", controller.getUserOrgs.bind(controller));
+router.get("/organization", controller.getOrgBySlug.bind(controller));
+// check for invalid uuid
 router.get("/:orgId", controller.getOrgById.bind(controller));
-router.get("/:slug", controller.getOrgBySlug.bind(controller));
 
 export default router;

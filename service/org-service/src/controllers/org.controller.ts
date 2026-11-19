@@ -30,7 +30,7 @@ export class OrgController implements IOrgController {
     }
 
     async getOrgBySlug(req: Request, res: Response): Promise<void> {
-        const slug = req.params.slug as string;
+        const slug = req.headers["x-org-subdomain"] as string | undefined;
         if (!slug) {
             throw new AppError(
                 StatusCode.BadRequest,
