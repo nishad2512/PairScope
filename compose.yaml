@@ -23,12 +23,14 @@ services:
     environment:
       AUTH_SERVICE_URL: "http://auth-service:3001"
       SESSION_SERVICE_URL: "http://session-service:3002"
+      ORG_SERVICE_URL: "http://org-service:3003"
       ACCESS_SECRET: pairScopeAccessSecret
     ports:
       - "3000:3000"
     depends_on:
       - auth-service
       - session-service
+      - org-service
 
   auth-service:
     build:
@@ -55,6 +57,18 @@ services:
       GRPC_AUTH_URL: "auth-service:50051"
     ports:
       - "3002:3002"
+    depends_on:
+      - postgres
+
+  org-service:
+    build: 
+      context: .
+      dockerfile: ./service/org-service/Dockerfile
+    container_name: org-service
+    environment:
+      DATABASE_URL: postgresql://pairscope:PairScope@postgres/org
+    ports:
+      - "3003:3003"
     depends_on:
       - postgres
 

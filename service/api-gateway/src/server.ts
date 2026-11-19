@@ -102,6 +102,31 @@ app.use(
     }),
 );
 
+app.use(
+    "/api/organizations",
+    verifyUser,
+    requireRegister,
+    createProxyMiddleware({
+        target: process.env.ORG_SERVICE_URL ?? "http://localhost:3003",
+        changeOrigin: true,
+        pathRewrite: (path) => `/organizations${path}`,
+        proxyTimeout: 10_000,
+        timeout: 10_000,
+        on: {
+            proxyReq: (proxyReq, req: Request, _res) => {
+                proxyReq.removeHeader("x-user-payload");
+
+                if (req.user) {
+                    proxyReq.setHeader(
+                        "x-user-payload",
+                        JSON.stringify(req.user),
+                    );
+                }
+            },
+        },
+    }),
+);
+
 app.listen(PORT, () => {
     console.log(`Api Gateway running on port ${PORT}`);
 });
