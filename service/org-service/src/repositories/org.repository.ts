@@ -3,13 +3,15 @@ import { db } from "../config/db";
 import { IOrg, IOrgRepository } from "../interfaces/org.interface";
 import { orgs } from "../models/organization.model";
 import { injectable } from "tsyringe";
+import { Transaction } from "@/types/database.types";
 
 @injectable()
 export class OrgRepository implements IOrgRepository {
     async create(
         org: typeof orgs.$inferInsert,
+        tx: Transaction
     ): Promise<IOrg> {
-        const [newOrg] = await db.insert(orgs).values(org).returning();
+        const [newOrg] = await tx.insert(orgs).values(org).returning();
 
         if (!newOrg) {
             throw new Error("Organization creation failed");
