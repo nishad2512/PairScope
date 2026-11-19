@@ -1,22 +1,44 @@
+import { MemberController } from "@/controllers/membership.controller";
 import { OrgController } from "@/controllers/org.controller";
 import { getUser } from "@/middlewares/auth.middleware";
 import validate from "@/middlewares/validation";
-import { createOrgSchema } from "@/validators/org.validator";
+import {
+    createMemberSchema,
+    createOrgSchema,
+} from "@/validators/org.validator";
 import { Router } from "express";
 import { container } from "tsyringe";
 
 const router = Router();
-const controller = container.resolve(OrgController);
+const orgController = container.resolve(OrgController);
+const memController = container.resolve(MemberController);
 
 router.use(getUser);
 
-router.post("/", validate(createOrgSchema), controller.create.bind(controller));
-router.get("/", controller.getUserOrgs.bind(controller));
-router.get("/organization", controller.getOrgBySlug.bind(controller));
-router.get("/:orgId", controller.getOrgById.bind(controller));
+router
+    .route("/")
+    .post(validate(createOrgSchema), orgController.create.bind(orgController))
+    .get(orgController.getUserOrgs.bind(orgController));
+router.get("/organization", orgController.getOrgBySlug.bind(orgController));
+router.get("/:orgId", orgController.getOrgById.bind(orgController));
+
+// membership management
+
+// need proper authorization check
+router
+    .route("/:orgId/members")
+    .post(
+        validate(createMemberSchema),
+        memController.create.bind(memController),
+    )
+    .get(memController.getOrgMembers.bind(memController));
+
+router
+    .route("/:orgId/members/:memId")
+    .get(memController.getMemberById.bind(memController))
+    .delete(memController.deleteMember.bind(memController));
 
 export default router;
-
 
 // membership invitation need proper flow
 // for now hardcode the userId

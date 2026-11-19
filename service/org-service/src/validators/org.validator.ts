@@ -6,4 +6,11 @@ export const createOrgSchema = z.object({
     password: z.string().min(8).max(64),
 });
 
+export const createMemberSchema = z.object({
+    userId: z.uuid(),
+    role: z.enum(["INTERVIEWER", "ADMIN"]),
+});
+
 export type CreateOrgDTO = z.infer<typeof createOrgSchema>;
+
+export type CreateMemberDTO = z.infer<typeof createMemberSchema>;

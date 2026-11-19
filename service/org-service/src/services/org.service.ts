@@ -34,7 +34,7 @@ export class OrgService implements IOrgService {
 
         return await db.transaction(async (tx) => {
             const org = await this.orgRepo.create({ ...dto, ownerId }, tx);
-            const member = await this.membRepo.create(
+            const member = await this.membRepo.createTx(
                 {
                     userId: ownerId,
                     orgId: org.id,

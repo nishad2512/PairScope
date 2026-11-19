@@ -12,11 +12,24 @@ import { injectable } from "tsyringe";
 
 @injectable()
 export class MemberRepository implements IMemberRepository {
-    async create(
+    async createTx(
         member: typeof members.$inferInsert,
         tx: Transaction,
     ): Promise<IOrgMember> {
         const [newMember] = await tx.insert(members).values(member).returning();
+
+        if (!newMember) {
+            throw new AppError(
+                StatusCode.InternalServerError,
+                "Membership creation failed",
+            );
+        }
+
+        return newMember;
+    }
+
+    async create(member: typeof members.$inferInsert): Promise<IOrgMember> {
+        const [newMember] = await db.insert(members).values(member).returning();
 
         if (!newMember) {
             throw new AppError(
@@ -45,6 +58,18 @@ export class MemberRepository implements IMemberRepository {
             .select()
             .from(members)
             .where(and(eq(members.orgId, orgId), eq(members.id, memId)));
+
+        return orgMember || null;
+    }
+
+    async getMemberByUser(
+        userId: string,
+        orgId: string,
+    ): Promise<IOrgMember | null> {
+        const [orgMember] = await db
+            .select()
+            .from(members)
+            .where(and(eq(members.orgId, orgId), eq(members.userId, userId)));
 
         return orgMember || null;
     }
