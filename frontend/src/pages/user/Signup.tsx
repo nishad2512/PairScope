@@ -1,7 +1,5 @@
-const Signup = () => {
-  return (
-    <div>Signup</div>
-  )
-}
+import AuthSectionOne from "../../components/ui/auth-section-1";
 
-export default Signup
+export default function Signup() {
+    return <AuthSectionOne />;
+}

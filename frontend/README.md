@@ -1,75 +1,42 @@
-# React + TypeScript + Vite
+# PairScope frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + TypeScript + Vite. The interface uses the existing Axios API helpers and Zustand auth store, with Tailwind CSS v4, Lucide icons, and the Paper grain shader.
 
-Currently, two official plugins are available:
+## Development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```sh
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+Vite forwards `/api` to the existing gateway at `http://localhost:3000`. Start the PairScope backend separately. No credentials or sample data are embedded in the app.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```sh
+npm run build
+npm run lint
 ```
+
+## Structure
+
+- `src/components/ui/`: shared form controls, buttons, feedback, dialog, and the adapted `auth-section-1.tsx` reference.
+- `src/components/`: navigation shell and reusable session UI.
+- `src/pages/`: authentication, overview, sessions, organization/member management, and invitation joining.
+- `src/hooks/use-resource.ts`: cancellable reads with explicit loading, failure, and retry states.
+- `src/index.css`: design tokens, responsive layouts, and reduced-motion styling.
+- `src/api/`, `src/store/`, `src/types/`: existing request flow and shared contracts.
+
+`components.json`, the `@/` alias, Tailwind, and `src/lib/utils.ts` establish the shadcn-compatible structure. Keep reusable UI in `src/components/ui/` so generated components and application imports share one predictable location. No separate shadcn scaffold is needed.
+
+## Routes
+
+- `/login`, `/signup`: email/password authentication and session restoration.
+- `/dashboard`: counts derived from the current user’s actual sessions.
+- `/sessions`: search, type/status filters, creation, and optional scheduling.
+- `/sessions/:sessionId`: overview and role-based invitation links.
+- `/organizations`: organization creation and browsing.
+- `/organizations/:orgId`: members, adding existing users by ID, and confirmed removal.
+- `/join/:token`: guest or signed-in participant joining.
+
+The editor file is intentionally untouched and has no route in this UI. Session creation opens the session overview; guest joining confirms participation. Editor handoff can be added when the editor is ready. Social login, password reset, and download links are omitted because corresponding API flows do not exist.
+
+Browser history routes need an `index.html` fallback in production, and the deployment must forward `/api` to the gateway. Access tokens remain in memory; refresh cookies restore an authenticated workspace after reload.

@@ -27,7 +27,7 @@ async function refreshAccessToken(): Promise<string> {
             .post<{ accessToken: string }>(
                 `/api${API_ROUTES.AUTH.REFRESH}`,
                 {},
-                { withCredentials: true },
+                { withCredentials: true, timeout: 10_000 },
             )
             .then((res) => {
                 useAuthStore.getState().setAccessToken(res.data.accessToken);
@@ -48,8 +48,11 @@ apiClient.interceptors.response.use(
             | (InternalAxiosRequestConfig & { _retry?: boolean })
             | undefined;
 
-        const isAuthRoute = original?.url?.includes(API_ROUTES.AUTH.REFRESH);
-        const canRetry = original && !original._retry && !isAuthRoute;
+        const isAuthRoute = Object.values(API_ROUTES.AUTH).some(
+            (route) => original?.url === route,
+        );
+        const canRetry = original && !original._retry && !isAuthRoute
+            && !!useAuthStore.getState().accessToken;
 
         if (error.response?.status === 401 && canRetry) {
             original._retry = true;

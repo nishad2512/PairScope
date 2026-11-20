@@ -1,35 +1,105 @@
-import { BrowserRouter, Route, Routes } from "react-router";
-import { RequireAnon } from "./components/guards";
+import { useEffect, useState } from "react";
+import {
+    BrowserRouter,
+    Link,
+    Navigate,
+    Route,
+    Routes,
+    useLocation,
+} from "react-router";
+import { RequireAnon, RequireAuth } from "./components/guards";
+import { tryRestoreSession } from "./api/auth.api";
+import { useAuthStore } from "./store/auth.store";
+import { EmptyState, Loading } from "./components/ui/primitives";
+import AppLayout from "./components/AppLayout";
 import Login from "./pages/user/Login";
 import Signup from "./pages/user/Signup";
-
-const App = () => {
+import Dashboard from "./pages/user/Dashboard";
+import Sessions from "./pages/session/Sessions";
+import SessionData from "./pages/session/SessionData";
+import Organizations, { OrganizationDetails } from "./pages/org/Dashboard";
+import Join from "./pages/session/Join";
+let initialRestore: Promise<boolean> | undefined;
+export default function App() {
+    const [ready, setReady] = useState(false);
+    useEffect(() => {
+        let active = true;
+        initialRestore ??= tryRestoreSession();
+        void initialRestore.finally(() => {
+            if (active) setReady(true);
+        });
+        return () => {
+            active = false;
+        };
+    }, []);
+    if (!ready)
+        return (
+            <div className="boot-screen">
+                <Loading />
+            </div>
+        );
     return (
         <BrowserRouter>
+            <ScrollReset />
             <Routes>
+                <Route path="/" element={<Home />} />
                 <Route element={<RequireAnon />}>
-                    <Route path="/login" element={<Login />}/>
-                    <Route path="/signup" element={<Signup />}/>
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/signup" element={<Signup />} />
                 </Route>
-
-                
+                <Route path="/join/:token" element={<Join />} />
+                <Route element={<RequireAuth />}>
+                    <Route element={<AppLayout />}>
+                        <Route path="/dashboard" element={<Dashboard />} />
+                        <Route path="/sessions" element={<Sessions />} />
+                        <Route
+                            path="/sessions/:sessionId"
+                            element={<SessionData />}
+                        />
+                        <Route
+                            path="/organizations"
+                            element={<Organizations />}
+                        />
+                        <Route
+                            path="/organizations/:orgId"
+                            element={<OrganizationDetails />}
+                        />
+                    </Route>
+                </Route>
+                <Route
+                    path="*"
+                    element={
+                        <div className="boot-screen">
+                            <EmptyState
+                                icon={<span>404</span>}
+                                title="A little off the beaten path."
+                                action={
+                                    <Link
+                                        className="button button-primary"
+                                        to="/"
+                                    >
+                                        Back to PairScope
+                                    </Link>
+                                }
+                            >
+                                The page you’re looking for isn’t here.
+                            </EmptyState>
+                        </div>
+                    }
+                />
             </Routes>
         </BrowserRouter>
     );
-};
+}
+function Home() {
+    const token = useAuthStore((s) => s.accessToken);
+    return <Navigate to={token ? "/dashboard" : "/login"} replace />;
+}
 
-// <div>
-//     <p>Show Login page if the user is not logged in</p>
-//     <p>Show the dashboard if the user is logged in with user credentials</p>
-//     <p>Make sure there are are routes which are restricted to unlogged in users</p>
-//     <p>Add a global state management tool, like context / redux / zustand / any other global 
-//         state management tool, I prefer zustand.
-//     </p>
-//     <p>Utilize every backend routes which are provided by api gateway</p>
-//     <p>Use route contants for api routes</p>
-//     <p>Use request and response interpreters, use ajax / axios</p>
-//     <p>Use proper request boilerplate</p>
-//     <p>I want to manage the editor file myself</p>
-// </div>
-
-export default App;
+function ScrollReset() {
+    const { pathname } = useLocation();
+    useEffect(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    }, [pathname]);
+    return null;
+}

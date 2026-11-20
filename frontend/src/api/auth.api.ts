@@ -51,7 +51,7 @@ export function tryRestoreSession(): Promise<boolean> {
                 const { data } = await axios.post<{ accessToken: string }>(
                     `/api${API_ROUTES.AUTH.REFRESH}`,
                     {},
-                    { withCredentials: true },
+                    { withCredentials: true, timeout: 10_000 },
                 );
                 useAuthStore.getState().setAccessToken(data.accessToken);
 

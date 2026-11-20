@@ -1,8 +1,5 @@
+import AuthSectionOne from "../../components/ui/auth-section-1";
 
-const Login = () => {
-  return (
-    <div>Login</div>
-  )
+export default function Login() {
+  return <AuthSectionOne mode="login" />;
 }
-
-export default Login
