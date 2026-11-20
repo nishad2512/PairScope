@@ -4,8 +4,9 @@ import {
 } from "@/interfaces/membership.interface";
 import { StatusCode } from "@/utils/StatusEnum";
 import { Request, Response } from "express";
-import { inject } from "tsyringe";
+import { inject, injectable } from "tsyringe";
 
+@injectable()
 export class MemberController implements IMemberController {
     constructor(
         @inject("IMemberService") private readonly serv: IMemberService,

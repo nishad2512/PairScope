@@ -14,7 +14,7 @@ const uuidRegex =
 @injectable()
 export class MemberService implements IMemberService {
     constructor(
-        @inject("IMemberService") private readonly memRepo: IMemberRepository,
+        @inject("IMemberRepository") private readonly memRepo: IMemberRepository,
     ) {}
 
     async create(
