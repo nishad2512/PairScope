@@ -25,7 +25,6 @@ export const verifyUser = async (
         );
 
         req.user = decodedPayload as AccessPayload;
-        console.log(req.user);
 
         return next();
     } catch (error) {
@@ -67,7 +66,6 @@ export const optionalAuth = async (
         );
 
         req.user = decodedPayload as AccessPayload;
-        console.log(req.user);
 
         return next();
     } catch (error) {

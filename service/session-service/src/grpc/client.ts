@@ -2,6 +2,7 @@ import * as grpc from "@grpc/grpc-js";
 import { type ServiceClientConstructor } from "@grpc/grpc-js";
 import * as protoLoader from "@grpc/proto-loader";
 import path from "path";
+import { existsSync } from "node:fs";
 
 const loaderOptions = {
     keepCase: true,
@@ -17,7 +18,9 @@ function createGrpcClient(
     address: string,
 ) {
     const packageDefinition = protoLoader.loadSync(
-        path.join(process.cwd(), protoPath),
+        existsSync(path.join(process.cwd(), protoPath))
+            ? path.join(process.cwd(), protoPath)
+            : path.resolve(__dirname, "../../../../", protoPath),
         loaderOptions,
     );
     const protoDescriptor = grpc.loadPackageDefinition(packageDefinition);

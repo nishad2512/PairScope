@@ -1,4 +1,4 @@
-import { AccessPayload } from "../interfaces/refresh.interface";
+import { AccessPayload } from "../interfaces/session.interface";
 
 declare global {
     namespace Express {

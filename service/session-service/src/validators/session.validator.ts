@@ -42,3 +42,19 @@ export const createSessionSchema = z
     );
 
 export type CreateSessionDTO = z.infer<typeof createSessionSchema>;
+
+export const realtimeAccessSchema = z
+    .object({
+        sessionId: z.uuid(),
+        userId: z.uuid(),
+        guest: z.boolean(),
+    })
+    .strict();
+
+export const accessPayloadSchema = z.object({
+    userId: z.uuid(),
+    role: z.string().nullable().optional(),
+    sessionId: z.uuid().optional(),
+});
+
+export type RealtimeAccessDTO = z.infer<typeof realtimeAccessSchema>;

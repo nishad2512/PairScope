@@ -21,11 +21,27 @@ export class InvitationRepository {
         return newInvite;
     }
 
+    async acceptInvite(
+        tx: Transaction,
+        invitationId: string,
+        userId: string | null,
+    ): Promise<void> {
+        await tx
+            .update(invitations)
+            .set({
+                status: "ACCEPTED",
+                acceptedAt: new Date(),
+                invitedUserId: userId,
+            })
+            .where(eq(invitations.id, invitationId));
+    }
+
     async findInviteByToken(tx: Transaction, tokenHash: string) {
         const [invite] = await tx
             .select()
             .from(invitations)
-            .where(eq(invitations.tokenHash, tokenHash));
+            .where(eq(invitations.tokenHash, tokenHash))
+            .for("update");
 
         return invite;
     }

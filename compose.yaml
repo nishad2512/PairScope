@@ -25,6 +25,7 @@ services:
       SESSION_SERVICE_URL: "http://session-service:3002"
       ORG_SERVICE_URL: "http://org-service:3003"
       REALTIME_SERVICE_URL: "http://realtime:3004"
+      INTERNAL_SERVICE_SECRET: pairScopeInternalSecret
       ACCESS_SECRET: pairScopeAccessSecret
     ports:
       - "3000:3000"
@@ -57,6 +58,7 @@ services:
     environment:
       DATABASE_URL: postgresql://pairscope:PairScope@postgres/session
       GRPC_AUTH_URL: "auth-service:50051"
+      INTERNAL_SERVICE_SECRET: pairScopeInternalSecret
     ports:
       - "3002:3002"
     depends_on:

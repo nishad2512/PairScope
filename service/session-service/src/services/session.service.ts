@@ -5,7 +5,11 @@ import { SessionRepository } from "@/repositories/session.repository";
 import AppError from "@/utils/AppError";
 import { StatusCode } from "@/utils/StatusEnum";
 import { CreateInviteDTO, JoinInviteDTO } from "@/validators/invite.validator";
-import { CreateSessionDTO } from "@/validators/session.validator";
+import { ISession } from "@/models/session.model";
+import {
+    CreateSessionDTO,
+    RealtimeAccessDTO,
+} from "@/validators/session.validator";
 import { createHash, randomBytes } from "node:crypto";
 import { inject, injectable } from "tsyringe";
 import { getUserData, setGuestUser } from "./grpc.service";
@@ -61,83 +65,184 @@ export class SessionService {
         return this.repo.getSessionsForUser(userId);
     }
 
+    async authorizeRealtime(dto: RealtimeAccessDTO) {
+        const session = await this.repo.getSessionById(dto.sessionId);
+        const participant = dto.guest
+            ? await this.participantRepo.getGuestParticipant(
+                  dto.sessionId,
+                  dto.userId,
+              )
+            : await this.participantRepo.getUserParticipant(
+                  dto.sessionId,
+                  dto.userId,
+              );
+
+        if (!session || !participant) {
+            throw new AppError(
+                StatusCode.Forbidden,
+                "Session participation is required",
+            );
+        }
+
+        this.checkSession(session);
+
+        return {
+            sessionId: session.id,
+            language: session.language,
+            status: session.status.toLowerCase(),
+            expiresAt: session.expiresAt?.toISOString() ?? null,
+            participant: {
+                id: participant.id,
+                userId: participant.userId,
+                displayName: participant.displayName,
+                role: participant.role,
+            },
+        };
+    }
+
     async createInvitation(
         dto: CreateInviteDTO,
         invitor: string,
         sessionId: string,
     ) {
-        let userId = null;
-        if (dto.email) {
-            const user = (await getUserData(dto.email)) as any;
-            userId = user?.id || null;
+        const validId =
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+                sessionId,
+            );
+        if (!validId) {
+            throw new AppError(StatusCode.BadRequest, "Invalid session ID");
         }
 
-        const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
-        const status = "PENDING";
+        const session = await this.repo.getSessionById(sessionId);
+        if (!session || session.creatorId !== invitor) {
+            throw new AppError(
+                StatusCode.Forbidden,
+                "Only the session owner can create invitations",
+            );
+        }
+
+        this.checkSession(session);
+
+        const user = dto.email ? await getUserData(dto.email) : null;
+        if (dto.email && !user) {
+            throw new AppError(
+                StatusCode.BadRequest,
+                "No registered user found for this email. Leave email blank to invite a guest.",
+            );
+        }
 
         const token = randomBytes(32).toString("hex");
-        const tokenHash = hashToken(token);
-
         const invitation = await this.inviteRepo.createInvite({
             invitedBy: invitor,
-            expiresAt,
+            expiresAt: new Date(Date.now() + 60 * 60 * 1000),
             sessionId,
-            invitedEmail: dto.email,
+            invitedEmail: dto.email ?? null,
             role: dto.role,
-            invitedUserId: userId,
-            status,
-            tokenHash,
+            invitedUserId: user?.id ?? null,
+            status: "PENDING",
+            tokenHash: hashToken(token),
         });
 
         return { invitation, token };
     }
 
-    async joinInvitation(dto: JoinInviteDTO, token: string, userId: string | null) {
-        const tokenHash = hashToken(token);
-        const result = await db.transaction(async (tx) => {
-            const invite = await this.inviteRepo.findInviteByToken(
-                tx,
-                tokenHash,
-            );
-
-            if (!invite) {
-                throw new AppError(
-                    StatusCode.BadRequest,
-                    "Invalid invitation token",
-                );
-            }
-
-            const participant = await this.participantRepo.createParticipant(
-                tx,
-                {
-                    displayName: dto.name,
-                    role: invite?.role,
-                    sessionId: invite?.sessionId,
-                    userId: invite?.invitedUserId,
-                },
-            );
-
-            return { ...participant };
-        });
-
-        if (!result.userId) {
-            const data = await setGuestUser(
-                result.id as string,
-                result.sessionId,
-                result.role,
-            );
-
-            console.log("auth service result: ", data);
-            return { result, data };
-        } else if (result.userId && !userId) {
+    async joinInvitation(
+        dto: JoinInviteDTO,
+        token: string,
+        userId: string | null,
+    ) {
+        if (!/^[a-f0-9]{64}$/i.test(token)) {
             throw new AppError(
                 StatusCode.BadRequest,
-                "Registered User: please login",
+                "Invalid invitation token",
             );
         }
 
-        // validation check: whether 2 of the userId's are same or not.
+        return await db.transaction(async (tx) => {
+            const invite = await this.inviteRepo.findInviteByToken(
+                tx,
+                hashToken(token),
+            );
+            if (
+                !invite ||
+                invite.expiresAt <= new Date() ||
+                ["REVOKED", "EXPIRED"].includes(invite.status)
+            ) {
+                throw new AppError(
+                    StatusCode.BadRequest,
+                    "Invitation is invalid or expired",
+                );
+            }
 
-        return result;
+            if (invite.invitedUserId && invite.invitedUserId !== userId) {
+                throw new AppError(
+                    userId ? StatusCode.Forbidden : StatusCode.Unauthorized,
+                    "Sign in with the account this invitation was sent to",
+                );
+            }
+
+            const session = await this.repo.getSessionForUpdate(
+                tx,
+                invite.sessionId,
+            );
+            if (!session) {
+                throw new AppError(StatusCode.NotFound, "Session not found");
+            }
+
+            this.checkSession(session);
+
+            // Lock the session while checking membership so parallel joins cannot create duplicates.
+            const existing = userId
+                ? await this.participantRepo.getUserParticipant(
+                      invite.sessionId,
+                      userId,
+                      tx,
+                  )
+                : null;
+
+            if (invite.status === "ACCEPTED") {
+                if (existing && invite.invitedUserId === userId) {
+                    return existing;
+                }
+                throw new AppError(
+                    StatusCode.Conflict,
+                    "This invitation has already been accepted. Ask the owner for a new invitation.",
+                );
+            }
+
+            const participant =
+                existing ??
+                (await this.participantRepo.createParticipant(tx, {
+                    displayName: dto.name,
+                    role: invite.role,
+                    sessionId: invite.sessionId,
+                    userId,
+                    invitationId: invite.id,
+                    joinedAt: new Date(),
+                }));
+
+            const data = userId
+                ? null
+                : await setGuestUser(
+                      participant.id!,
+                      invite.sessionId,
+                      participant.role,
+                  );
+            await this.inviteRepo.acceptInvite(tx, invite.id, userId);
+
+            return data ? { result: participant, data } : participant;
+        });
+    }
+
+    private checkSession(session: ISession): void {
+        if (
+            !["LIVE", "SCHEDULED"].includes(session.status) ||
+            (session.expiresAt && session.expiresAt <= new Date())
+        ) {
+            throw new AppError(
+                StatusCode.Conflict,
+                "Session is closed or expired",
+            );
+        }
     }
 }

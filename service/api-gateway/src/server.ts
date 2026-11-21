@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express, { Request } from "express";
 import { createServer } from "http";
 import { createProxyMiddleware } from "http-proxy-middleware";
@@ -16,7 +17,11 @@ const PORT = process.env.PORT || 3000;
 
 app.set("trust proxy", 1);
 
-app.use(morgan("dev"));
+app.use(
+    morgan("dev", {
+        skip: (req) => req.path.startsWith("/api/sessions/join/"),
+    }),
+);
 
 app.use(
     rateLimit({
@@ -80,6 +85,24 @@ app.use(
         pathRewrite: { "^/api": "" },
         proxyTimeout: 10_000,
         timeout: 10_000,
+        on: {
+            proxyReq: (proxyReq, req: Request) => {
+                proxyReq.removeHeader("x-user-payload");
+                proxyReq.removeHeader("x-internal-secret");
+                if (process.env.INTERNAL_SERVICE_SECRET) {
+                    proxyReq.setHeader(
+                        "x-internal-secret",
+                        process.env.INTERNAL_SERVICE_SECRET,
+                    );
+                }
+                if (req.user) {
+                    proxyReq.setHeader(
+                        "x-user-payload",
+                        JSON.stringify(req.user),
+                    );
+                }
+            },
+        },
     }),
 );
 
@@ -96,6 +119,13 @@ app.use(
         on: {
             proxyReq: (proxyReq, req: Request, _res) => {
                 proxyReq.removeHeader("x-user-payload");
+                proxyReq.removeHeader("x-internal-secret");
+                if (process.env.INTERNAL_SERVICE_SECRET) {
+                    proxyReq.setHeader(
+                        "x-internal-secret",
+                        process.env.INTERNAL_SERVICE_SECRET,
+                    );
+                }
 
                 if (req.user) {
                     proxyReq.setHeader(

@@ -8,7 +8,30 @@ import { StatusCode } from "@/utils/StatusEnum";
 import { desc, eq, inArray, or } from "drizzle-orm";
 
 export class SessionRepository implements ISessionRepository {
-    async createSession(tx: Transaction, session: typeof sessions.$inferInsert): Promise<ISession> {
+    async getSessionById(sessionId: string): Promise<ISession | null> {
+        const [session] = await db
+            .select()
+            .from(sessions)
+            .where(eq(sessions.id, sessionId));
+        return session || null;
+    }
+
+    async getSessionForUpdate(
+        tx: Transaction,
+        sessionId: string,
+    ): Promise<ISession | null> {
+        const [session] = await tx
+            .select()
+            .from(sessions)
+            .where(eq(sessions.id, sessionId))
+            .for("update");
+        return session || null;
+    }
+
+    async createSession(
+        tx: Transaction,
+        session: typeof sessions.$inferInsert,
+    ): Promise<ISession> {
         const [newSession] = await tx
             .insert(sessions)
             .values(session)

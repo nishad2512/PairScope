@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import * as grpc from "@grpc/grpc-js";
 import * as protoLoader from "@grpc/proto-loader";
 import path from "node:path";
+import { existsSync } from "node:fs";
 import { container } from "tsyringe";
 import { GrpcController } from "./controllers/grpc.controller";
 import authRoutes from "./routes/auth.routes";
@@ -15,7 +16,9 @@ const PORT = process.env.PORT || 3001;
 const GRPC_PORT = process.env.GRPC_PORT || 50051;
 
 const packageDefinition = protoLoader.loadSync(
-    path.join(process.cwd(), "proto/auth.proto"),
+    existsSync(path.join(process.cwd(), "proto/auth.proto"))
+        ? path.join(process.cwd(), "proto/auth.proto")
+        : path.resolve(__dirname, "../../../proto/auth.proto"),
     {
         keepCase: true,
         longs: String,

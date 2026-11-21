@@ -1,6 +1,7 @@
 import express from "express";
 import "reflect-metadata";
 import "./utils/container";
+import internalRoutes from "@/routes/internal.routes";
 import sessionRoutes from "@/routes/session.routes";
 import errHandler from "@/middlewares/err-handler";
 
@@ -10,6 +11,7 @@ const PORT = process.env.PORT ?? 3002;
 app.disable("x-powered-by");
 app.use(express.json({ limit: "32kb" }));
 app.use("/sessions", sessionRoutes);
+app.use("/internal", internalRoutes);
 
 app.use(errHandler);
 

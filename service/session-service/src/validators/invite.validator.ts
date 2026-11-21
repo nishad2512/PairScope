@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const createInviteSchema = z.object({
-    email: z.email().nullable().optional(),
+    email: z.email().trim().toLowerCase().nullable().optional(),
     role: z.enum(["INTERVIEWER", "CANDIDATE", "COLLABORATOR", "OBSERVER"]),
 });
 

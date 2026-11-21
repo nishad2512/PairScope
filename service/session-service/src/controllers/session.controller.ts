@@ -60,6 +60,14 @@ export class SessionController {
         });
     };
 
+    public authorizeRealtime = async (
+        req: Request,
+        res: Response,
+    ): Promise<void> => {
+        const data = await this.service.authorizeRealtime(req.body);
+        res.status(StatusCode.Ok).json({ data });
+    };
+
     public createInvite = async (
         req: Request,
         res: Response,
@@ -83,7 +91,7 @@ export class SessionController {
         const result = await this.service.joinInvitation(
             req.body,
             token as string,
-            req.user?.userId || null
+            req.user?.sessionId ? null : req.user?.userId || null,
         );
 
         res.status(StatusCode.Ok).json({ data: result });

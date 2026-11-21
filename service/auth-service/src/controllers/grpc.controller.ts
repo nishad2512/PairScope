@@ -14,6 +14,14 @@ export class GrpcController {
         try {
             const result = await this.serv.getUser(call.request.email);
 
+            if (!result) {
+                callback({
+                    code: grpc.status.NOT_FOUND,
+                    message: "User not found",
+                });
+                return;
+            }
+
             callback(null, result);
         } catch (err: any) {
             console.error(err.message);
