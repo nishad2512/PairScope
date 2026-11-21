@@ -8,7 +8,6 @@ import SessionConsole from "../../components/editor/SessionConsole";
 import { useAuthStore } from "../../store/auth.store";
 import { useSessionStore } from "../../store/session.store";
 import { useSessionPresence } from "../../hooks/useSessionPresence";
-import { useLocalDraft } from "../../hooks/useLocalDraft";
 import type { CursorPosition } from "../../types/realtime.types";
 import "./editor.css";
 
@@ -45,12 +44,8 @@ function EditorWorkspace({
     isGuest: boolean;
 }) {
     const location = useLocation();
-    const user = useAuthStore((state) => state.user);
     const guest = useSessionStore((state) => state.guestAccess);
     const presence = useSessionPresence(sessionId, token, isGuest);
-    const draft = useLocalDraft(
-        `pairscope:draft:${sessionId}:${isGuest ? guest?.participant.id : user?.email || "account"}`,
-    );
     const [position, setPosition] = useState<CursorPosition>({
         lineNumber: 1,
         column: 1,
@@ -84,7 +79,11 @@ function EditorWorkspace({
                 go: "go",
             } as Record<string, string>
         )[language] || "txt";
-    const readOnly = presence.session?.participant.role === "OBSERVER";
+    const observer = presence.session?.participant.role === "OBSERVER";
+    const readOnly = presence.status !== "connected" || observer;
+    const syncStatus = presence.status === "connected"
+        ? presence.syncing ? "Syncing changes…" : "All changes synced"
+        : "Connection offline";
     const peers = presence.participants.filter((peer) => peer.socketId !== presence.selfSocketId);
     return (
         <main className="pair-editor">
@@ -109,13 +108,13 @@ function EditorWorkspace({
                 </span>
                 <span className="editor-local-label">
                     <LockKeyhole size={12} />
-                    Local draft
+                    Shared code
                 </span>
             </div>
-            {(presence.error || draft.error) && (
+            {presence.error && (
                 <div className="editor-alert" role="alert">
                     <AlertCircle size={17} />
-                    <span>{draft.error || presence.error}</span>
+                    <span>{presence.error}</span>
                     {presence.error && <button onClick={presence.reconnect}>Reconnect</button>}
                     {isGuest && guest && (
                         <Link to={`/join/${encodeURIComponent(guest.invitationToken)}`}>
@@ -130,7 +129,7 @@ function EditorWorkspace({
                         <span className="editor-file-tab">
                             <FileCode2 size={15} />
                             main.{extension}
-                            <span className="file-tab-dot" title="Local draft" />
+                            <span className="file-tab-dot" title="Shared code" />
                         </span>
                         <span>{readOnly ? "Read only" : language}</span>
                     </div>
@@ -138,19 +137,19 @@ function EditorWorkspace({
                         <CodeEditor
                             sessionId={sessionId}
                             language={language === "c++" ? "cpp" : language}
-                            value={draft.value}
+                            document={presence.document}
+                            content={presence.content}
                             readOnly={readOnly}
-                            onChange={draft.change}
                             onCursor={presence.sendCursor}
                             onPosition={onPosition}
                             participants={peers}
                             cursors={presence.cursors}
                         />
-                        {!draft.value && (
+                        {!presence.content && presence.status === "connected" && (
                             <div className="editor-start-hint" aria-hidden="true">
                                 <p>A little space to think.</p>
                                 <span>
-                                    Start typing. Your cursor is shared; your code stays local.
+                                    Start typing. Code and cursors are shared with your session.
                                 </span>
                             </div>
                         )}
@@ -169,10 +168,10 @@ function EditorWorkspace({
             <footer className="editor-statusbar">
                 <span>
                     <i className={presence.status === "connected" ? "connected" : ""} />
-                    {presence.status === "connected" ? "Presence is live" : "Presence offline"}
+                    {syncStatus}
                 </span>
                 <span>
-                    {readOnly ? "Observer" : "Local draft"}
+                    {observer ? "Observer" : "Shared code"}
                     <span className="statusbar-separator" />
                     Ln {position.lineNumber}, Col {position.column}
                     <span className="statusbar-separator" />

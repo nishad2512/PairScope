@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import * as Y from "yjs";
 import { io } from "socket.io-client";
 import type { Socket } from "socket.io-client";
 import { tryRestoreSession } from "../api/auth.api";
@@ -39,6 +40,10 @@ function initialState(sessionId: string, token: string): PresenceState {
 }
 
 export function useSessionPresence(sessionId: string, token: string, isGuest: boolean) {
+    const [document] = useState(() => new Y.Doc());
+    const [content, setContent] = useState("");
+    const [syncing, setSyncing] = useState(false);
+    const pending = useRef<Uint8Array[]>([]);
     const [state, setState] = useState(() => initialState(sessionId, token));
     const socketRef = useRef<Socket<ServerEvents, ClientEvents> | null>(null);
     const joinedRef = useRef(false);
@@ -50,6 +55,9 @@ export function useSessionPresence(sessionId: string, token: string, isGuest: bo
 
     useEffect(() => {
         let active = true;
+        let sending = false;
+        let connection = 0;
+        let documentTimer: ReturnType<typeof setTimeout> | null = null;
         const arriving = new Map<string, PresenceParticipant>();
         const departed = new Set<string>();
         const socket: Socket<ServerEvents, ClientEvents> = io({
@@ -116,12 +124,61 @@ export function useSessionPresence(sessionId: string, token: string, isGuest: bo
             update({ error: error.message });
         };
 
+        const flushDocument = () => {
+            if (!active || sending || !joinedRef.current || !pending.current.length) return;
+            const updates = pending.current;
+            const update = Y.mergeUpdates(updates);
+            if (update.byteLength > 64 * 1024) {
+                fail("This edit exceeds the session limit. Copy your code before reloading.");
+                return;
+            }
+            pending.current = [];
+            sending = true;
+            const currentConnection = connection;
+            socket.timeout(5000).emit("document:update", { sessionId, update }, (error, result) => {
+                if (!active || currentConnection !== connection) return;
+                sending = false;
+                if (error || !result.ok) {
+                    pending.current.unshift(update);
+                    if (error) {
+                        socket.disconnect().connect();
+                    } else if (!result.ok) {
+                        fail(`${result.error.message} Copy your code before reloading.`);
+                    }
+                    return;
+                }
+                setSyncing(pending.current.length > 0);
+                flushDocument();
+            });
+        };
+        const onDocument = (update: Uint8Array, origin: unknown) => {
+            setContent(document.getText("code").toString());
+            if (origin === "remote") return;
+            pending.current.push(update);
+            setSyncing(true);
+            if (!documentTimer) {
+                documentTimer = setTimeout(() => {
+                    documentTimer = null;
+                    flushDocument();
+                }, 50);
+            }
+        };
+        document.on("update", onDocument);
+        socket.on("document:update", (payload) => {
+            if (active && payload.sessionId === sessionId) {
+                Y.applyUpdate(document, new Uint8Array(payload.update), "remote");
+            }
+        });
+
         socket.on("connect", () => {
+            connection++;
+            sending = false;
+            const currentConnection = connection;
             arriving.clear();
             departed.clear();
             update({ ...initialState(sessionId, token), status: "joining" });
             socket.timeout(5000).emit("session:join", { sessionId }, (error, result) => {
-                if (!active) return;
+                if (!active || currentConnection !== connection || !socket.connected) return;
                 if (error) {
                     fail("The session did not respond. Try reconnecting.");
                     return;
@@ -131,6 +188,14 @@ export function useSessionPresence(sessionId: string, token: string, isGuest: bo
                     return;
                 }
                 if (result.data.sessionId !== sessionId) return;
+                const snapshot = new Uint8Array(result.data.document.update);
+                Y.applyUpdate(document, snapshot, "remote");
+                const missing = Y.encodeStateAsUpdate(
+                    document,
+                    Y.encodeStateVectorFromUpdate(snapshot),
+                );
+                pending.current = missing.byteLength > 2 ? [missing] : [];
+                setSyncing(pending.current.length > 0);
                 joinedRef.current = true;
                 update({
                     status: "connected",
@@ -139,11 +204,14 @@ export function useSessionPresence(sessionId: string, token: string, isGuest: bo
                     session: result.data,
                     participants: [
                         ...new Map(
-                            result.data.participants.map((peer) => [peer.socketId, peer]),
+                            [...result.data.participants, ...arriving.values()]
+                                .filter((peer) => !departed.has(peer.socketId))
+                                .map((peer) => [peer.socketId, peer]),
                         ).values(),
                     ],
                     cursors: {},
                 });
+                if (result.data.participant.role !== "OBSERVER") flushDocument();
                 socket.emit("presence:update", {
                     sessionId,
                     ...cursorRef.current,
@@ -152,7 +220,10 @@ export function useSessionPresence(sessionId: string, token: string, isGuest: bo
         });
 
         socket.on("session:participant-joined", (peer) => {
-            if (!active || !joinedRef.current || peer.sessionId !== sessionId) return;
+            if (!active || peer.sessionId !== sessionId) return;
+            arriving.set(peer.socketId, peer);
+            departed.delete(peer.socketId);
+            if (!joinedRef.current) return;
             setState((current) => ({
                 ...current,
                 participants: [
@@ -210,6 +281,7 @@ export function useSessionPresence(sessionId: string, token: string, isGuest: bo
             );
         });
         socket.on("disconnect", () => {
+            connection++;
             joinedRef.current = false;
             update({
                 status: "disconnected",
@@ -224,6 +296,8 @@ export function useSessionPresence(sessionId: string, token: string, isGuest: bo
 
         return () => {
             active = false;
+            document.off("update", onDocument);
+            if (documentTimer) clearTimeout(documentTimer);
             joinedRef.current = false;
             if (timerRef.current) clearTimeout(timerRef.current);
             timerRef.current = null;
@@ -233,7 +307,14 @@ export function useSessionPresence(sessionId: string, token: string, isGuest: bo
             socket.disconnect();
             if (socketRef.current === socket) socketRef.current = null;
         };
-    }, [sessionId, token, isGuest]);
+    }, [sessionId, token, isGuest, document]);
+
+    useEffect(() => {
+        if (!syncing) return;
+        const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+        window.addEventListener("beforeunload", warn);
+        return () => window.removeEventListener("beforeunload", warn);
+    }, [syncing]);
 
     const sendCursor = useCallback(
         (value: Pick<CursorUpdate, "cursor" | "selection">) => {
@@ -268,6 +349,9 @@ export function useSessionPresence(sessionId: string, token: string, isGuest: bo
         ...(state.sessionId === sessionId && state.token === token
             ? state
             : initialState(sessionId, token)),
+        document,
+        content,
+        syncing,
         sendCursor,
         reconnect,
     };

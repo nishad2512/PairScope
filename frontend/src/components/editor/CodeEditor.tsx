@@ -1,4 +1,6 @@
 import { useEffect, useRef } from "react";
+import { MonacoBinding } from "y-monaco";
+import type * as Y from "yjs";
 import * as monaco from "monaco-editor/editor";
 import EditorWorker from "monaco-editor/editor/editor.worker.js?worker";
 import "monaco-editor/languages/definitions/javascript/register.js";
@@ -35,11 +37,11 @@ monaco.editor.defineTheme("pairscope", {
 interface Props {
     sessionId: string;
     language: string;
-    value: string;
+    document: Y.Doc;
+    content: string;
     readOnly: boolean;
     participants: PresenceParticipant[];
     cursors: Record<string, RemoteCursor>;
-    onChange: (value: string) => void;
     onCursor: (value: Pick<CursorUpdate, "cursor" | "selection">) => void;
     onPosition: (position: CursorPosition) => void;
 }
@@ -47,11 +49,11 @@ interface Props {
 export default function CodeEditor({
     sessionId,
     language,
-    value,
+    document: sharedDocument,
+    content,
     readOnly,
     participants,
     cursors,
-    onChange,
     onCursor,
     onPosition,
 }: Props) {
@@ -62,13 +64,15 @@ export default function CodeEditor({
         if (!container.current) return;
         const editor = monaco.editor.create(container.current, {
             value: "",
+            readOnly: true,
             language: "plaintext",
             theme: "pairscope",
             ariaLabel: "Session code editor",
             automaticLayout: true,
             fontSize: 14,
             lineHeight: 24,
-            fontFamily: "'JetBrains Mono', 'SFMono-Regular', Consolas, monospace",
+            fontFamily:
+                "'JetBrains Mono', 'SFMono-Regular', Consolas, monospace",
             minimap: { enabled: false },
             padding: { top: 22, bottom: 24 },
             scrollBeyondLastLine: false,
@@ -81,6 +85,11 @@ export default function CodeEditor({
             hideCursorInOverviewRuler: true,
         });
         editorRef.current = editor;
+        const binding = new MonacoBinding(
+            sharedDocument.getText("code"),
+            editor.getModel()!,
+            new Set([editor]),
+        );
         const publish = () => {
             const position = editor.getPosition();
             const selection = editor.getSelection();
@@ -99,24 +108,21 @@ export default function CodeEditor({
             });
         };
         const listeners = [
-            editor.onDidChangeModelContent(() => onChange(editor.getValue())),
             editor.onDidChangeCursorSelection(publish),
             editor.onDidFocusEditorText(publish),
-            editor.onDidBlurEditorText(() => onCursor({ cursor: null, selection: null })),
+            editor.onDidBlurEditorText(() =>
+                onCursor({ cursor: null, selection: null }),
+            ),
         ];
         return () => {
+            binding.destroy();
             listeners.forEach((listener) => listener.dispose());
             const model = editor.getModel();
             editor.dispose();
             model?.dispose();
             editorRef.current = null;
         };
-    }, [sessionId, onChange, onCursor, onPosition]);
-
-    useEffect(() => {
-        const editor = editorRef.current;
-        if (editor && editor.getValue() !== value) editor.setValue(value);
-    }, [value, sessionId]);
+    }, [sessionId, sharedDocument, onCursor, onPosition]);
 
     useEffect(() => {
         const editor = editorRef.current;
@@ -133,7 +139,11 @@ export default function CodeEditor({
         const decorations: monaco.editor.IModelDeltaDecoration[] = [];
         for (const peer of participants) {
             const remote = cursors[peer.socketId];
-            if (!remote?.cursor || remote.cursor.lineNumber > model.getLineCount()) continue;
+            if (
+                !remote?.cursor ||
+                remote.cursor.lineNumber > model.getLineCount()
+            )
+                continue;
             const color = participantColor(peer.id);
             const node = document.createElement("div");
             node.className = "pair-remote-caret";
@@ -146,12 +156,17 @@ export default function CodeEditor({
                 getDomNode: () => node,
                 getPosition: () => ({
                     position: model.validatePosition(remote.cursor!),
-                    preference: [monaco.editor.ContentWidgetPositionPreference.EXACT],
+                    preference: [
+                        monaco.editor.ContentWidgetPositionPreference.EXACT,
+                    ],
                 }),
             };
             editor.addContentWidget(widget);
             widgets.push(widget);
-            if (remote.selection && remote.selection.endLineNumber <= model.getLineCount()) {
+            if (
+                remote.selection &&
+                remote.selection.endLineNumber <= model.getLineCount()
+            ) {
                 const selection = remote.selection;
                 decorations.push({
                     range: new monaco.Range(
@@ -172,7 +187,13 @@ export default function CodeEditor({
             collection.clear();
             widgets.forEach((widget) => editor.removeContentWidget(widget));
         };
-    }, [participants, cursors, sessionId, value]);
+    }, [participants, cursors, sessionId, content]);
 
-    return <div ref={container} className="session-code-editor" aria-label="Code workspace" />;
+    return (
+        <div
+            ref={container}
+            className="session-code-editor"
+            aria-label="Code workspace"
+        />
+    );
 }
