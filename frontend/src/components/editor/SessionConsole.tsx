@@ -79,7 +79,7 @@ export default function SessionConsole() {
                         </strong>
                         <p>
                             {tab === "terminal"
-                                ? "Code execution isn’t available yet. Your draft stays in this tab."
+                                ? "Code execution isn’t available yet. Your code is shared with this session."
                                 : "Breakpoints, variables, and the call stack will appear when debugging is available."}
                         </p>
                     </div>

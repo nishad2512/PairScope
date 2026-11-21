@@ -33,12 +33,12 @@ npm run lint
 - `/dashboard`: counts derived from the current user’s actual sessions.
 - `/sessions`: search, type/status filters, creation, and optional scheduling.
 - `/sessions/:sessionId`: overview and role-based invitation links.
-- `/sessions/:sessionId/editor`: local Monaco draft, participant presence, and remote cursors.
+- `/sessions/:sessionId/editor`: shared Monaco editor, participant presence, and remote cursors.
 - `/organizations`: organization creation and browsing.
 - `/organizations/:orgId`: members, adding existing users by ID, and confirmed removal.
 - `/join/:token`: guest or signed-in participant joining.
 
-The Editor uses simple components for its header, code area, participants, and output panels. Only participant presence and cursor/selection positions are shared. Code stays in a tab-scoped draft; execution, debugging, chat, and video controls are unavailable placeholders. Monaco and its worker are bundled locally and loaded only on the Editor route.
+The Editor uses simple components for its header, code area, participants, and output panels. Code edits sync through Yjs using the realtime service, alongside presence and cursor/selection positions. The editor loads the session snapshot on join and merges unacknowledged edits on reconnect. Editing pauses while disconnected; old local drafts are not imported into the shared document. The realtime service retains snapshots for 24 hours after the last edit; execution, debugging, chat, and video controls are unavailable placeholders. Monaco and its worker are bundled locally and loaded only on the Editor route.
 
 Guest invitation joins retain their session-scoped token in `sessionStorage`, separately from registered-user auth. Account tokens remain in memory. Vite proxies both `/api` and `/socket.io` to the gateway. The existing realtime service must be running with a working session-authorization endpoint before real room joins can succeed. This frontend change does not modify or replace that backend endpoint.
 

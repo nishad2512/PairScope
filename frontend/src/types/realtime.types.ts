@@ -39,6 +39,7 @@ export interface JoinedSession {
     status: string;
     participant: SessionParticipant;
     participants: PresenceParticipant[];
+    document: { update: Uint8Array; revision: number };
 }
 
 export interface RealtimeError {
@@ -51,6 +52,7 @@ export type ConnectionStatus =
 export type Result<T> = { ok: true; data: T } | { ok: false; error: RealtimeError };
 
 export interface ServerEvents {
+    "document:update": (payload: { sessionId: string; update: Uint8Array; revision: number }) => void;
     "session:participant-joined": (
         participant: PresenceParticipant & { sessionId: string },
     ) => void;
@@ -60,6 +62,10 @@ export interface ServerEvents {
 }
 
 export interface ClientEvents {
+    "document:update": (
+        payload: { sessionId: string; update: Uint8Array },
+        ack: (result: Result<{ revision: number }>) => void,
+    ) => void;
     "session:join": (
         payload: { sessionId: string },
         ack: (result: Result<JoinedSession>) => void,

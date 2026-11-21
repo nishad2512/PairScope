@@ -109,7 +109,7 @@ export default function ParticipantsPanel({
                         <MousePointer2 size={15} />
                         Together in the details.
                     </span>
-                    <p>See who’s here and follow their cursor. Code is a local draft for now.</p>
+                    <p>Write together, see who’s here, and follow their cursor.</p>
                 </div>
             </div>
             <div className="people-call-placeholder">

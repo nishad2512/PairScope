@@ -7,7 +7,10 @@ import { defineConfig } from "vite";
 export default defineConfig({
     plugins: [react(), tailwindcss()],
     resolve: {
-        alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
+        alias: {
+            "@": fileURLToPath(new URL("./src", import.meta.url)),
+            "monaco-editor/esm/vs/editor/editor.api.js": "monaco-editor/editor",
+        },
     },
     server: {
         proxy: {
