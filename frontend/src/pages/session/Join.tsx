@@ -5,12 +5,14 @@ import { Check, Users } from "lucide-react";
 import Brand from "../../components/Brand";
 import { Button, Field, Notice } from "../../components/ui/primitives";
 import { joinSession } from "../../api/session.api";
+import { useSessionStore } from "../../store/session.store";
 import { useAuthStore } from "../../store/auth.store";
 import type { Participant } from "../../types/api.types";
 import { errorMessage, readable } from "../../lib/format";
 
 export default function Join() {
     const { token = "" } = useParams();
+    const setGuestAccess = useSessionStore((state) => state.setGuestAccess);
     const user = useAuthStore((s) => s.user);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState("");
@@ -29,6 +31,18 @@ export default function Join() {
                 "result" in response.data
                     ? response.data.result
                     : response.data;
+            if ("result" in response.data) {
+                if (!response.data.data.token)
+                    throw new Error(
+                        "Your guest credential is missing. Please try joining again.",
+                    );
+                setGuestAccess({
+                    sessionId: joined.sessionId,
+                    token: response.data.data.token,
+                    participant: joined,
+                    invitationToken: token,
+                });
+            }
             setParticipant(joined);
         } catch (error) {
             setError(errorMessage(error));
@@ -51,7 +65,7 @@ export default function Join() {
                 </h1>
                 <p>
                     {participant
-                        ? `Welcome, ${participant.displayName}. You’ve joined as ${readable(participant.role).toLowerCase()}. Your host can now see you in the session.`
+                        ? `Welcome, ${participant.displayName}. You’ve joined as ${readable(participant.role).toLowerCase()}. You’re ready to enter the workspace.`
                         : "You’ve been invited to a PairScope session. Let everyone know what to call you."}
                 </p>
                 {participant ? (
@@ -73,6 +87,14 @@ export default function Join() {
                         />
                         <Button busy={busy}>Join session</Button>
                     </form>
+                )}
+                {participant && (
+                    <Link
+                        className="button button-primary"
+                        to={`/sessions/${participant.sessionId}/editor`}
+                    >
+                        Enter workspace
+                    </Link>
                 )}
                 <Link className="text-link" to={user ? "/dashboard" : "/login"}>
                     {user ? "Go to your workspace" : "Sign in to your account"}

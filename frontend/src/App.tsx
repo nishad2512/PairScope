@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import {
     BrowserRouter,
     Link,
@@ -19,6 +19,8 @@ import Sessions from "./pages/session/Sessions";
 import SessionData from "./pages/session/SessionData";
 import Organizations, { OrganizationDetails } from "./pages/org/Dashboard";
 import Join from "./pages/session/Join";
+const Editor = lazy(() => import("./pages/session/Editor"));
+
 let initialRestore: Promise<boolean> | undefined;
 export default function App() {
     const [ready, setReady] = useState(false);
@@ -48,6 +50,14 @@ export default function App() {
                     <Route path="/signup" element={<Signup />} />
                 </Route>
                 <Route path="/join/:token" element={<Join />} />
+                <Route
+                    path="/sessions/:sessionId/editor"
+                    element={
+                        <Suspense fallback={<div className="boot-screen"><Loading /></div>}>
+                            <Editor />
+                        </Suspense>
+                    }
+                />
                 <Route element={<RequireAuth />}>
                     <Route element={<AppLayout />}>
                         <Route path="/dashboard" element={<Dashboard />} />

@@ -102,7 +102,18 @@ export default function SessionData() {
               "A shared space for your next great conversation."}
           </p>
         </div>
-        <Badge>{readable(session.status)}</Badge>
+        <div className="session-entry">
+          <Badge>{readable(session.status)}</Badge>
+          {!["completed", "cancelled", "expired"].includes(session.status.toLowerCase()) && (
+            <Link
+              className="button button-primary"
+              to={`/sessions/${session.id}/editor`}
+              state={{ title: session.title, language: session.language }}
+            >
+              <Code2 size={16} />Open workspace
+            </Link>
+          )}
+        </div>
       </div>
       <div className="detail-grid">
         <section className="panel detail-panel">

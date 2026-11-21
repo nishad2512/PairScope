@@ -75,7 +75,7 @@ export interface Participant {
 export interface JoinResponseBody {
     data:
         | Participant
-        | { result: Participant; data: { accessToken?: string } };
+        | { result: Participant; data: { token: string } };
 }
 
 export interface Organization {

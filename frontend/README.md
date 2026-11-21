@@ -33,10 +33,13 @@ npm run lint
 - `/dashboard`: counts derived from the current user’s actual sessions.
 - `/sessions`: search, type/status filters, creation, and optional scheduling.
 - `/sessions/:sessionId`: overview and role-based invitation links.
+- `/sessions/:sessionId/editor`: local Monaco draft, participant presence, and remote cursors.
 - `/organizations`: organization creation and browsing.
 - `/organizations/:orgId`: members, adding existing users by ID, and confirmed removal.
 - `/join/:token`: guest or signed-in participant joining.
 
-The editor file is intentionally untouched and has no route in this UI. Session creation opens the session overview; guest joining confirms participation. Editor handoff can be added when the editor is ready. Social login, password reset, and download links are omitted because corresponding API flows do not exist.
+The Editor uses simple components for its header, code area, participants, and output panels. Only participant presence and cursor/selection positions are shared. Code stays in a tab-scoped draft; execution, debugging, chat, and video controls are unavailable placeholders. Monaco and its worker are bundled locally and loaded only on the Editor route.
+
+Guest invitation joins retain their session-scoped token in `sessionStorage`, separately from registered-user auth. Account tokens remain in memory. Vite proxies both `/api` and `/socket.io` to the gateway. The existing realtime service must be running with a working session-authorization endpoint before real room joins can succeed. This frontend change does not modify or replace that backend endpoint.
 
 Browser history routes need an `index.html` fallback in production, and the deployment must forward `/api` to the gateway. Access tokens remain in memory; refresh cookies restore an authenticated workspace after reload.
