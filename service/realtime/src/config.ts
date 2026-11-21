@@ -1,6 +1,7 @@
+import "dotenv/config";
 import z from "zod";
 
-export const realtimeConfigSchema = z.object({
+const configSchema = z.object({
     PORT: z.coerce.number().int().min(1).max(65535).default(3004),
     ACCESS_SECRET: z.string().min(1),
     INTERNAL_SERVICE_SECRET: z.string().min(16),
@@ -9,7 +10,7 @@ export const realtimeConfigSchema = z.object({
     CLIENT_URL: z
         .string()
         .default("http://localhost:5173,http://127.0.0.1:5173")
-        .transform((value) =>
-            value.split(",").map((origin) => new URL(origin.trim()).origin),
-        ),
+        .transform((value) => value.split(",").map((origin) => new URL(origin.trim()).origin)),
 });
+
+export const config = configSchema.parse(process.env);

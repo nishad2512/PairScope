@@ -1,8 +1,13 @@
 import * as jwt from "jsonwebtoken";
-import { config } from "@/config/env";
-import { RealtimeSocket } from "@/types/socket.types";
-import { accessTokenSchema } from "@/validators/auth.validator";
-import { SocketCode } from "@/utils/StatusEnum";
+import z from "zod";
+import { config } from "../config";
+import { RealtimeSocket } from "../types/events";
+
+const accessTokenSchema = z.object({
+    userId: z.uuid(),
+    sessionId: z.uuid().optional(),
+    exp: z.number().int().positive(),
+});
 
 export const socketAuthMiddleware = (
     socket: RealtimeSocket,
@@ -20,7 +25,6 @@ export const socketAuthMiddleware = (
         const payload = accessTokenSchema.parse(
             jwt.verify(token, config.ACCESS_SECRET, { algorithms: ["HS256"] }),
         );
-
         socket.data.identity = {
             userId: payload.userId,
             sessionId: payload.sessionId,
@@ -29,11 +33,10 @@ export const socketAuthMiddleware = (
 
         next();
     } catch {
-        const error = new Error(
-            "A valid access token is required.",
-        ) as Error & { data: { code: SocketCode } };
-        error.data = { code: SocketCode.Unauthorized };
-
+        const error = new Error("A valid access token is required.") as Error & {
+            data: { code: string };
+        };
+        error.data = { code: "UNAUTHORIZED" };
         next(error);
     }
 };

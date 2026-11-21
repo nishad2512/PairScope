@@ -24,6 +24,7 @@ services:
       AUTH_SERVICE_URL: "http://auth-service:3001"
       SESSION_SERVICE_URL: "http://session-service:3002"
       ORG_SERVICE_URL: "http://org-service:3003"
+      REALTIME_SERVICE_URL: "http://realtime:3004"
       ACCESS_SECRET: pairScopeAccessSecret
     ports:
       - "3000:3000"
@@ -31,6 +32,7 @@ services:
       - auth-service
       - session-service
       - org-service
+      - realtime
 
   auth-service:
     build:
@@ -72,5 +74,40 @@ services:
     depends_on:
       - postgres
 
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  realtime:
+    build:
+      context: .
+      dockerfile: ./service/realtime/Dockerfile
+    environment:
+      ACCESS_SECRET: pairScopeAccessSecret
+      INTERNAL_SERVICE_SECRET: pairScopeInternalSecret
+      REDIS_URL: redis://redis:6379
+      SESSION_SERVICE_URL: http://session-service:3002
+      CLIENT_URL: "${CLIENT_URL:-http://localhost:5173,http://127.0.0.1:5173}"
+    expose:
+      - "3004"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3004/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      redis:
+        condition: service_healthy
+      session-service:
+        condition: service_started
+
 volumes:
   postgres_data:
+  redis_data:

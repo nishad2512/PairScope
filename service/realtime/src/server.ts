@@ -1,12 +1,7 @@
-import "dotenv/config";
-import "reflect-metadata";
-import "@/utils/container";
 import express from "express";
 import { createServer } from "http";
-import { config } from "@/config/env";
-import { isRedisReady } from "@/config/redis";
-import { closeSocket, initSocket } from "@/io";
-import { StatusCode } from "@/utils/StatusEnum";
+import { config } from "./config";
+import { initSocket } from "./io";
 
 const app = express();
 const httpServer = createServer(app);
@@ -14,24 +9,23 @@ const PORT = config.PORT;
 
 app.disable("x-powered-by");
 
-app.get("/health", (_req, res) => {
-    const ready = isRedisReady();
-
-    res.status(ready ? StatusCode.Ok : StatusCode.ServiceUnavailable).json({
-        status: ready ? "ok" : "unavailable",
-        service: "realtime-service",
-    });
-});
-
 const startServer = async (): Promise<void> => {
-    const io = await initSocket(httpServer);
+    const realtime = await initSocket(httpServer);
+
+    app.get("/health", (_req, res) => {
+        const ready = realtime.ready();
+        res.status(ready ? 200 : 503).json({
+            status: ready ? "ok" : "unavailable",
+            service: "realtime-service",
+        });
+    });
 
     httpServer.listen(PORT, () => {
         console.log(`Realtime service running on port ${PORT}`);
     });
 
     let stopping = false;
-    const stopServer = (): void => {
+    const stopServer = async (): Promise<void> => {
         if (stopping) {
             return;
         }
@@ -40,13 +34,12 @@ const startServer = async (): Promise<void> => {
         const deadline = setTimeout(() => process.exit(1), 5000);
         deadline.unref();
 
-        closeSocket(io)
-            .then(() => {
-                clearTimeout(deadline);
-            })
-            .catch(() => {
-                process.exit(1);
-            });
+        try {
+            await realtime.close();
+            clearTimeout(deadline);
+        } catch {
+            process.exit(1);
+        }
     };
 
     process.once("SIGINT", stopServer);
@@ -54,8 +47,6 @@ const startServer = async (): Promise<void> => {
 };
 
 startServer().catch(() => {
-    console.error(
-        "Realtime startup failed. Check configuration and Redis availability.",
-    );
+    console.error("Realtime startup failed. Check configuration and Redis availability.");
     process.exitCode = 1;
 });

@@ -1,4 +1,5 @@
 import express, { Request } from "express";
+import { createServer } from "http";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import rateLimit from "express-rate-limit";
 import {
@@ -7,8 +8,10 @@ import {
     verifyUser,
 } from "./middlewares/auth.middleware";
 import morgan from "morgan";
+import { attachRealtimeProxy } from "./realtime.proxy";
 
 const app = express();
+const httpServer = createServer(app);
 const PORT = process.env.PORT || 3000;
 
 app.set("trust proxy", 1);
@@ -21,6 +24,7 @@ app.use(
         limit: 100,
         standardHeaders: "draft-8",
         legacyHeaders: false,
+        skip: (req) => req.path === "/socket.io" || req.path.startsWith("/socket.io/"),
         handler: (_req, res) =>
             res.status(429).json({
                 success: false,
@@ -28,6 +32,8 @@ app.use(
             }),
     }),
 );
+
+attachRealtimeProxy(app, httpServer, process.env.REALTIME_SERVICE_URL ?? "http://localhost:3004");
 
 app.use(
     createProxyMiddleware({
@@ -74,8 +80,8 @@ app.use(
         pathRewrite: { "^/api": "" },
         proxyTimeout: 10_000,
         timeout: 10_000,
-    })
-)
+    }),
+);
 
 app.use(
     "/api/sessions",
@@ -127,6 +133,6 @@ app.use(
     }),
 );
 
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
     console.log(`Api Gateway running on port ${PORT}`);
 });
