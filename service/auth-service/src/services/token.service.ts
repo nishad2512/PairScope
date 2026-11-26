@@ -5,7 +5,7 @@ import {
     RefreshPayload,
 } from "@/interfaces/refresh.interface";
 import * as jwt from "jsonwebtoken";
-import bcrypt from "bcrypt";
+import { IHashService } from "@/interfaces/hash.interface";
 import AppError from "@/utils/AppError";
 import { inject, injectable } from "tsyringe";
 import { StatusCode } from "@/utils/StatusEnum";
@@ -14,6 +14,7 @@ import { StatusCode } from "@/utils/StatusEnum";
 export class TokenService implements ITokenService {
     constructor(
         @inject("IRefreshRepository") private readonly repo: IRefreshRepository,
+        @inject("IHashService") private readonly hasher: IHashService,
     ) {}
 
     public generateGuestToken(partId: string, sessionId: string, role: string) {
@@ -41,7 +42,7 @@ export class TokenService implements ITokenService {
             },
         );
 
-        const currentTokenHash = await bcrypt.hash(token, 12);
+        const currentTokenHash = await this.hasher.hash(token);
 
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + 30);
@@ -62,7 +63,7 @@ export class TokenService implements ITokenService {
     ) {
         const tokenFamily = await this.repo.findByTokenId(currentTokenId);
         if (!tokenFamily) {
-            throw new AppError(StatusCode.BadRequest, "Invalid Credentials");
+            throw new AppError(StatusCode.Unauthorized, "Invalid Credentials");
         }
 
         const token = jwt.sign(
@@ -73,7 +74,7 @@ export class TokenService implements ITokenService {
             },
         );
 
-        const currentTokenHash = await bcrypt.hash(token, 12);
+        const currentTokenHash = await this.hasher.hash(token);
 
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + 30);
@@ -101,13 +102,13 @@ export class TokenService implements ITokenService {
 
         const family = await this.repo.findByTokenId(payload.currentTokenId);
         if (family) {
-            const isMatch = await bcrypt.compare(
+            const isMatch = await this.hasher.compare(
                 token,
                 family.currentTokenHash,
             );
 
             if (!isMatch) {
-                throw new AppError(StatusCode.BadRequest, "Invalid Token");
+                throw new AppError(StatusCode.Unauthorized, "Invalid Token");
             }
 
             return payload as RefreshPayload;
@@ -124,7 +125,7 @@ export class TokenService implements ITokenService {
             );
         }
 
-        throw new AppError(StatusCode.BadRequest, "Invalid token");
+        throw new AppError(StatusCode.Unauthorized, "Invalid token");
     }
 
     public async revokeRefreshToken(token: string): Promise<void> {

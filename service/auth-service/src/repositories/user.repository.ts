@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { db } from "../config/db";
 import { IUserRepo } from "../interfaces/user.interface";
 import { IUser, users } from "../models/user.model";
@@ -10,8 +10,11 @@ import { StatusCode } from "@/utils/StatusEnum";
 export class UserRepository implements IUserRepo {
     async createUser(user: IUser): Promise<IUser> {
         const [newUser] = await db.insert(users).values(user).returning();
-        if(!newUser) {
-            throw new AppError(StatusCode.InternalServerError, "Database crashed")
+        if (!newUser) {
+            throw new AppError(
+                StatusCode.InternalServerError,
+                "Database crashed",
+            );
         }
         return newUser;
     }
@@ -36,7 +39,15 @@ export class UserRepository implements IUserRepo {
         return user || null;
     }
 
-    async updateUser(id: string, user: any): Promise<void> {
+    async getUsersByIds(ids: string[]): Promise<IUser[]> {
+        if (!ids.length) return [];
+        return db.select().from(users).where(inArray(users.id, ids));
+    }
+
+    async updateUser(
+        id: string,
+        user: Partial<Omit<IUser, "id">>,
+    ): Promise<void> {
         await db.update(users).set(user).where(eq(users.id, id));
     }
 

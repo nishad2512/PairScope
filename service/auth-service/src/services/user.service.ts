@@ -1,19 +1,28 @@
 import { inject, injectable } from "tsyringe";
-import { IUserRepo } from "../interfaces/user.interface";
+import {
+    IUserRepo,
+    IUserService,
+    IUserLookupService,
+} from "../interfaces/user.interface";
 import { LoginDTO, SignupDTO } from "@/validators/auth.validator";
 import AppError from "@/utils/AppError";
-import bcrypt from "bcrypt";
-import { toUserResponse } from "@/mappers/user.mapper";
+import { IHashService } from "@/interfaces/hash.interface";
+import {
+    toUserResponse,
+    toUserProfile,
+    toAuthUser,
+} from "@/mappers/user.mapper";
 import { ITokenService } from "@/interfaces/refresh.interface";
 import { IUser } from "@/models/user.model";
 import { randomUUID } from "node:crypto";
 import { StatusCode } from "@/utils/StatusEnum";
 
 @injectable()
-export class UserService {
+export class UserService implements IUserService, IUserLookupService {
     constructor(
         @inject("IUserRepo") private readonly repo: IUserRepo,
         @inject("ITokenService") private readonly tokenServ: ITokenService,
+        @inject("IHashService") private readonly hasher: IHashService,
     ) {}
 
     private async issueTokens(user: IUser) {
@@ -38,7 +47,7 @@ export class UserService {
             throw new AppError(StatusCode.Conflict, "The user already exists");
         }
 
-        const passwordHash = await bcrypt.hash(dto.password, 12);
+        const passwordHash = await this.hasher.hash(dto.password);
 
         const user = await this.repo.createUser({
             displayName: dto.name.trim(),
@@ -59,12 +68,21 @@ export class UserService {
         const email = dto.email.trim().toLowerCase();
         const user = await this.repo.getUserByEmail(email);
         if (!user) {
-            throw new AppError(StatusCode.BadRequest, "Incorrect email or password");
+            throw new AppError(
+                StatusCode.Unauthorized,
+                "Incorrect email or password",
+            );
         }
 
-        const passwordCheck = await bcrypt.compare(dto.password, user.password);
+        const passwordCheck = await this.hasher.compare(
+            dto.password,
+            user.password,
+        );
         if (!passwordCheck) {
-            throw new AppError(StatusCode.BadRequest, "Incorrect email or password");
+            throw new AppError(
+                StatusCode.Unauthorized,
+                "Incorrect email or password",
+            );
         }
 
         const publicUser = toUserResponse(user);
@@ -79,7 +97,7 @@ export class UserService {
 
         const user = await this.repo.getUserById(payload.userId);
         if (!user) {
-            throw new AppError(StatusCode.BadRequest, "Invalid credentials");
+            throw new AppError(StatusCode.Unauthorized, "Invalid credentials");
         }
 
         const accessToken = this.tokenServ.generateAccessToken(
@@ -91,7 +109,7 @@ export class UserService {
             randomUUID(),
         );
 
-        return { accessToken, refreshToken }
+        return { accessToken, refreshToken };
     }
 
     public async logout(token: string) {
@@ -111,6 +129,11 @@ export class UserService {
     public async getUser(email: string) {
         const user = await this.repo.getUserByEmail(email);
 
-        return user;
+        return user ? toAuthUser(user) : null;
+    }
+
+    public async getUserProfiles(ids: string[]) {
+        const users = await this.repo.getUsersByIds([...new Set(ids)]);
+        return users.map(toUserProfile);
     }
 }

@@ -1,52 +1,76 @@
-import { UserService } from "@/services/user.service";
 import { inject, injectable } from "tsyringe";
-import grpc from "@grpc/grpc-js";
-import { TokenService } from "@/services/token.service";
+import * as grpc from "@grpc/grpc-js";
+import {
+    AuthUser,
+    IUserLookupService,
+    UserProfile,
+} from "@/interfaces/user.interface";
+import { IGuestTokenService } from "@/interfaces/refresh.interface";
+import {
+    userLookupSchema,
+    userProfilesSchema,
+    guestTokenSchema,
+} from "@/validators/grpc.validator";
+import { grpcError } from "@/middlewares/grpc-error";
+import AppError from "@/utils/AppError";
+import { StatusCode } from "@/utils/StatusEnum";
 
 @injectable()
 export class GrpcController {
     constructor(
-        @inject("UserService") private readonly serv: UserService,
-        @inject("ITokenService") private readonly tokServ: TokenService,
+        @inject("IUserLookupService")
+        private readonly users: IUserLookupService,
+        @inject("ITokenService") private readonly tokens: IGuestTokenService,
     ) {}
 
-    public async getUserData(call: any, callback: any) {
+    async getUserData(
+        call: grpc.ServerUnaryCall<{ email: string }, AuthUser>,
+        callback: grpc.sendUnaryData<AuthUser>,
+    ) {
         try {
-            const result = await this.serv.getUser(call.request.email);
-
-            if (!result) {
-                callback({
-                    code: grpc.status.NOT_FOUND,
-                    message: "User not found",
-                });
-                return;
-            }
-
-            callback(null, result);
-        } catch (err: any) {
-            console.error(err.message);
-            callback({
-                code: grpc.status.INTERNAL,
-                message: err.message || "User data retrievel failed",
-            });
+            const { email } = userLookupSchema.parse(call.request);
+            const user = await this.users.getUser(email);
+            if (!user)
+                throw new AppError(StatusCode.NotFound, "User not found");
+            callback(null, user);
+        } catch (error) {
+            callback(grpcError(error));
         }
     }
 
-    public setGuestUser(call: any, callback: any) {
+    async getUserProfiles(
+        call: grpc.ServerUnaryCall<
+            { userIds: string[] },
+            { users: UserProfile[] }
+        >,
+        callback: grpc.sendUnaryData<{ users: UserProfile[] }>,
+    ) {
         try {
-            const result = this.tokServ.generateGuestToken(
-                call.request.partId,
-                call.request.sessionId,
-                call.request.role,
-            );
-
-            callback(null, { token: result });
-        } catch (err: any) {
-            console.error(err.message);
-            callback({
-                code: grpc.status.INTERNAL,
-                message: err.message || "Guest user setting failed",
+            const { userIds } = userProfilesSchema.parse(call.request);
+            callback(null, {
+                users: await this.users.getUserProfiles(userIds),
             });
+        } catch (error) {
+            callback(grpcError(error));
+        }
+    }
+
+    setGuestUser(
+        call: grpc.ServerUnaryCall<
+            { partId: string; sessionId: string; role: string },
+            { token: string }
+        >,
+        callback: grpc.sendUnaryData<{ token: string }>,
+    ) {
+        try {
+            const { partId, sessionId, role } = guestTokenSchema.parse(
+                call.request,
+            );
+            callback(null, {
+                token: this.tokens.generateGuestToken(partId, sessionId, role),
+            });
+        } catch (error) {
+            callback(grpcError(error));
         }
     }
 }

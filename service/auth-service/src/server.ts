@@ -1,3 +1,5 @@
+import { StatusCode } from "./utils/StatusEnum";
+import errHandler from "./middlewares/err-handler";
 import express from "express";
 import "reflect-metadata";
 import "./utils/container";
@@ -38,6 +40,13 @@ app.use(cookieParser());
 app.use("/auth", authRoutes);
 app.use("/user", userRoutes);
 
+app.use((_req, res) =>
+    res
+        .status(StatusCode.NotFound)
+        .json({ success: false, message: "Route not found" }),
+);
+app.use(errHandler);
+
 function startServer() {
     app.listen(PORT, () => {
         console.log(`Auth [rest] is running on port ${PORT}`);
@@ -47,6 +56,7 @@ function startServer() {
     const grpcController = container.resolve(GrpcController);
 
     grpcServer.addService(authService.service, {
+        GetUserProfiles: grpcController.getUserProfiles.bind(grpcController),
         GetUserData: grpcController.getUserData.bind(grpcController),
         SetGuestUser: grpcController.setGuestUser.bind(grpcController),
     });

@@ -1,21 +1,43 @@
 import { ErrorRequestHandler } from "express";
 import AppError from "../utils/AppError";
-import { StatusCode } from "@/utils/StatusEnum";
+import { StatusCode } from "../utils/StatusEnum";
+import { ZodError } from "zod";
 
-const errHandler: ErrorRequestHandler = (err, _req, res, _next) => {
-    console.error(err.message);
+const errHandler: ErrorRequestHandler = (error, _req, res, next) => {
+    if (res.headersSent) return next(error);
+    const failure =
+        error && typeof error === "object"
+            ? (error as { name?: string; code?: string; type?: string })
+            : {};
+    let status = StatusCode.InternalServerError;
+    let message = "Internal server error";
 
-    if (err instanceof AppError) {
-        return res.status(err.statusCode).json({
-            success: false,
-            message: err.message,
-        });
+    if (error instanceof AppError) {
+        status = error.statusCode;
+        message = error.message;
+    } else if (error instanceof ZodError) {
+        status = StatusCode.BadRequest;
+        message = "Invalid request data";
+    } else if (failure.type === "entity.parse.failed") {
+        status = StatusCode.BadRequest;
+        message = "Invalid JSON body";
+    } else if (failure.type === "entity.too.large") {
+        status = StatusCode.PayloadTooLarge;
+        message = "Request body is too large";
+    } else if (failure.code === "23505") {
+        status = StatusCode.Conflict;
+        message = "This record already exists";
+    } else if (
+        ["TokenExpiredError", "JsonWebTokenError", "NotBeforeError"].includes(
+            failure.name || "",
+        )
+    ) {
+        status = StatusCode.Unauthorized;
+        message = "Invalid or expired token";
     }
-
-    return res.status(StatusCode.InternalServerError).json({
-        success: false,
-        message: err.message || "Internal server error",
-    });
+    if (status >= StatusCode.InternalServerError)
+        console.error("Service request failed", failure.name || "UnknownError");
+    return res.status(status).json({ success: false, message });
 };
 
 export default errHandler;

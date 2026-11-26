@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
-import { UserService } from "@/services/user.service";
+import { IUserService } from "@/interfaces/user.interface";
+import { StatusCode } from "@/utils/StatusEnum";
 import { inject, injectable } from "tsyringe";
 import AppError from "@/utils/AppError";
 
@@ -7,7 +8,7 @@ const REFRESH_COOKIE_NAME = "pairscope_refresh";
 
 @injectable()
 export class AuthController {
-    constructor(@inject("UserService") private readonly serv: UserService) {}
+    constructor(@inject("IUserService") private readonly serv: IUserService) {}
 
     private setRefreshToken(res: Response, token: string) {
         res.cookie(REFRESH_COOKIE_NAME, token, {
@@ -22,7 +23,7 @@ export class AuthController {
         const response = await this.serv.signup(req.body);
         this.setRefreshToken(res, response.refreshToken);
 
-        res.status(201).json({
+        res.status(StatusCode.Created).json({
             user: response.user,
             accessToken: response.accessToken,
         });
@@ -32,7 +33,7 @@ export class AuthController {
         const response = await this.serv.login(req.body);
         this.setRefreshToken(res, response.refreshToken);
 
-        res.status(200).json({
+        res.status(StatusCode.Ok).json({
             user: response.user,
             accessToken: response.accessToken,
         });
@@ -41,24 +42,24 @@ export class AuthController {
     public async refresh(req: Request, res: Response) {
         const token = req.cookies[REFRESH_COOKIE_NAME];
         if (!token) {
-            throw new AppError(401, "Token not provided");
+            throw new AppError(StatusCode.Unauthorized, "Token not provided");
         }
 
         const response = await this.serv.refresh(token);
         this.setRefreshToken(res, response.refreshToken);
 
-        res.status(200).json({ accessToken: response.accessToken });
+        res.status(StatusCode.Ok).json({ accessToken: response.accessToken });
     }
 
     public async logout(req: Request, res: Response) {
         const token = req.cookies[REFRESH_COOKIE_NAME];
-        if(!token) {
-            throw new AppError(401, "Token not provided")
+        if (!token) {
+            throw new AppError(StatusCode.Unauthorized, "Token not provided");
         }
         await this.serv.logout(token);
         res.clearCookie(REFRESH_COOKIE_NAME);
 
-        res.status(200).json({ success: true });
+        res.status(StatusCode.Ok).json({ success: true });
     }
 
     public async me(req: Request, res: Response) {

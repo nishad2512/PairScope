@@ -1,14 +1,17 @@
 import { db } from "@/config/db";
 import { IRefreshRepository } from "@/interfaces/refresh.interface";
 import { IRefresh, refresh } from "@/models/refresh.model";
-import AppError from "@/utils/AppError";
-import { StatusCode } from "@/utils/StatusEnum";
 import { and, eq, isNull } from "drizzle-orm";
 import { injectable } from "tsyringe";
 
 @injectable()
 export class RefreshRepository implements IRefreshRepository {
-    async create(refreshToken: any): Promise<void> {
+    async create(
+        refreshToken: Pick<
+            IRefresh,
+            "userId" | "currentTokenId" | "currentTokenHash" | "expiresAt"
+        >,
+    ): Promise<void> {
         await db.insert(refresh).values(refreshToken);
     }
 
@@ -25,11 +28,7 @@ export class RefreshRepository implements IRefreshRepository {
                 ),
             );
 
-        if (!token) {
-            throw new AppError(StatusCode.NotFound, "Token not found");
-        }
-
-        return token;
+        return token || null;
     }
 
     async findByTokenId(currentTokenId: string): Promise<IRefresh | null> {
@@ -43,14 +42,13 @@ export class RefreshRepository implements IRefreshRepository {
                 ),
             );
 
-        if (!token) {
-            throw new AppError(StatusCode.NotFound, "Token not found");
-        }
-
-        return token;
+        return token || null;
     }
 
-    async updateById(id: string, data: any): Promise<void> {
+    async updateById(
+        id: string,
+        data: Partial<Omit<IRefresh, "id">>,
+    ): Promise<void> {
         await db.update(refresh).set(data).where(eq(refresh.id, id));
     }
 

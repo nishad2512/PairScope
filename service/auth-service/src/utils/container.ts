@@ -1,5 +1,11 @@
+import { HashService } from "@/services/hash.service";
+import { IHashService } from "@/interfaces/hash.interface";
 import { container } from "tsyringe";
-import { IUserRepo } from "../interfaces/user.interface";
+import {
+    IUserRepo,
+    IUserService,
+    IUserLookupService,
+} from "../interfaces/user.interface";
 import { UserRepository } from "../repositories/user.repository";
 import {
     IRefreshRepository,
@@ -15,6 +21,11 @@ container.registerSingleton<IRefreshRepository>(
     "IRefreshRepository",
     RefreshRepository,
 );
+container.registerSingleton<IHashService>("IHashService", HashService);
+container.register<IUserService>("IUserService", { useToken: "UserService" });
+container.register<IUserLookupService>("IUserLookupService", {
+    useToken: "UserService",
+});
 container.registerSingleton<ITokenService>("ITokenService", TokenService);
 container.registerSingleton("UserService", UserService);
 container.registerSingleton("AuthController", AuthController);

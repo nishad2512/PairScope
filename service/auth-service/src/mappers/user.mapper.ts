@@ -6,6 +6,22 @@ export function toUserResponse(user: IUser) {
         email: user.email,
         role: user.role,
         tier: user.tier,
-        avatar: user.avatarUrl
-    }
+        avatar: user.avatarUrl,
+    };
+}
+export function toUserProfile(user: IUser) {
+    return {
+        id: user.id!,
+        displayName: user.displayName,
+        avatarUrl: user.avatarUrl ?? "",
+    };
+}
+
+export function toAuthUser(user: IUser) {
+    return {
+        ...toUserProfile(user),
+        email: user.email,
+        role: user.role ?? "",
+        tier: user.tier ?? "",
+    };
 }
