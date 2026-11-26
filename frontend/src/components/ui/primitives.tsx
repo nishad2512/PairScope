@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type {
     ButtonHTMLAttributes,
     InputHTMLAttributes,
@@ -214,19 +214,44 @@ export function Badge({
 }
 export function Avatar({
     name,
+    src,
     small = false,
 }: {
     name: string;
+    src?: string | null;
     small?: boolean;
 }) {
+    const [failedImage, setFailedImage] = useState("");
+    const safeImage =
+        src &&
+        (/^https?:\/\//i.test(src) ||
+            (src.startsWith("/") && !src.startsWith("//")));
+    const initials =
+        name
+            .trim()
+            .split(/\s+/)
+            .map((part) => part[0])
+            .join("")
+            .slice(0, 2)
+            .toUpperCase() || "?";
     return (
-        <span className={`avatar ${small ? "avatar-small" : ""}`}>
-            {name
-                .split(" ")
-                .map((s) => s[0])
-                .join("")
-                .slice(0, 2)
-                .toUpperCase()}
+        <span
+            className={`avatar ${small ? "avatar-small" : ""}`}
+            role="img"
+            aria-label={name}
+        >
+            {safeImage && src !== failedImage ? (
+                <img
+                    src={src}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    referrerPolicy="no-referrer"
+                    onError={() => setFailedImage(src)}
+                />
+            ) : (
+                initials
+            )}
         </span>
     );
 }

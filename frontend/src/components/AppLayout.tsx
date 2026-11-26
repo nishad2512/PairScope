@@ -106,7 +106,11 @@ export default function AppLayout() {
                     </Button>
                 </div>
                 <div className="profile">
-                    <Avatar name={user?.displayName || "You"} small />
+                    <Avatar
+                        src={user?.avatar}
+                        name={user?.displayName || "You"}
+                        small
+                    />
                     <div>
                         <strong>{user?.displayName || "Your account"}</strong>
                         <small>{user?.email}</small>

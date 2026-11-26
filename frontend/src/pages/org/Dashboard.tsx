@@ -106,6 +106,7 @@ export function OrganizationDetails() {
             : { members: [], currentUserId: "" };
         return {
             org,
+            currentUserId: result.currentUserId,
             members: result.members,
             role: result.members.find(
                 (member) => member.userId === result.currentUserId,
@@ -197,10 +198,28 @@ export function OrganizationDetails() {
                                 className="member-row"
                                 key={member.id || member.userId}
                             >
-                                <Avatar name={member.role} small />
+                                <Avatar
+                                    name={member.displayName || "Member"}
+                                    src={member.avatarUrl}
+                                    small
+                                />
                                 <div>
-                                    <strong>{readable(member.role)}</strong>
-                                    <small>{member.userId}</small>
+                                    <strong>
+                                        {member.displayName ||
+                                            "Name unavailable"}
+                                        {member.userId ===
+                                            data.currentUserId && (
+                                            <span className="member-you">
+                                                {" "}
+                                                (you)
+                                            </span>
+                                        )}
+                                    </strong>
+                                    <small>
+                                        {member.userId === data.currentUserId
+                                            ? "Your account"
+                                            : "Team member"}
+                                    </small>
                                 </div>
                                 <Badge>{readable(member.role)}</Badge>
                                 {canManage &&
@@ -210,7 +229,7 @@ export function OrganizationDetails() {
                                     member.id && (
                                         <button
                                             className="icon-button"
-                                            aria-label={`Remove member ${member.userId}`}
+                                            aria-label={`Remove ${member.displayName || "member"}`}
                                             onClick={() => {
                                                 setActionError("");
                                                 setRemoving(member);
@@ -238,7 +257,7 @@ export function OrganizationDetails() {
             )}
             {removing && (
                 <Modal
-                    title="Remove this member?"
+                    title={`Remove ${removing.displayName || "this member"}?`}
                     description="They will lose access to this organization. They will need a new invitation to rejoin."
                     busy={busy}
                     onClose={() => setRemoving(null)}

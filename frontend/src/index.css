@@ -2484,3 +2484,7 @@ small {
   gap: 12px;
   flex-wrap: wrap;
 }
+
+.avatar { overflow: hidden; }
+.avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.member-you { color: var(--muted); font-size: 12px; font-weight: 400; }

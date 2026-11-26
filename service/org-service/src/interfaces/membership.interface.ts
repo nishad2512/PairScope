@@ -4,6 +4,11 @@ import { Request, Response } from "express";
 
 export type IOrgMember = typeof members.$inferSelect;
 
+export type MemberProfile = IOrgMember & {
+    displayName: string;
+    avatarUrl: string | null;
+};
+
 export interface IMemberRepository {
     createTx(
         member: typeof members.$inferInsert,
@@ -18,12 +23,12 @@ export interface IMemberRepository {
 }
 
 export interface IMemberService {
-    getMembersByOrg(orgId: string, userId: string): Promise<IOrgMember[]>;
+    getMembersByOrg(orgId: string, userId: string): Promise<MemberProfile[]>;
     getMemberById(
         memId: string,
         orgId: string,
         userId: string,
-    ): Promise<IOrgMember>;
+    ): Promise<MemberProfile>;
     deleteMember(memId: string, orgId: string, userId: string): Promise<void>;
 }
 

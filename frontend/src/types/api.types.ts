@@ -1,7 +1,7 @@
 export interface PublicUser {
     displayName: string;
     email: string;
-    role: 'user' | 'admin' | null;
+    role: "user" | "admin" | null;
     tier: string | null;
     avatar: string | null;
 }
@@ -11,9 +11,10 @@ export interface AuthPayload {
     accessToken: string;
 }
 
-export type SessionType = 'INTERVIEW' | 'COLLABORATION';
-export type InviteRole = 'INTERVIEWER' | 'CANDIDATE' | 'COLLABORATOR' | 'OBSERVER';
-export type MemberRole = 'INTERVIEWER' | 'ADMIN';
+export type SessionType = "INTERVIEW" | "COLLABORATION";
+export type InviteRole =
+    "INTERVIEWER" | "CANDIDATE" | "COLLABORATOR" | "OBSERVER";
+export type MemberRole = "INTERVIEWER" | "ADMIN";
 
 export interface CreateSessionInput {
     title: string;
@@ -73,9 +74,7 @@ export interface Participant {
 }
 
 export interface JoinResponseBody {
-    data:
-        | Participant
-        | { result: Participant; data: { token: string } };
+    data: Participant | { result: Participant; data: { token: string } };
 }
 
 export interface Organization {
@@ -92,9 +91,11 @@ export interface CreatedOrg {
 }
 
 export interface OrgMember {
+    displayName?: string;
+    avatarUrl?: string | null;
     id?: string;
     orgId?: string;
     userId: string;
-    role: 'OWNER' | 'ADMIN' | 'INTERVIEWER';
+    role: "OWNER" | "ADMIN" | "INTERVIEWER";
     createdAt?: string;
 }

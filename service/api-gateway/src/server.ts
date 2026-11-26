@@ -22,7 +22,7 @@ app.set("trust proxy", 1);
 
 app.use(
     morgan("dev", {
-        skip: (req) => req.path.startsWith("/api/sessions/join/"),
+        skip: (req) => req.path.startsWith("/api/sessions/join/") || req.path.startsWith("/api/organizations/join/"),
     }),
 );
 

@@ -1,4 +1,4 @@
-import { IAuthService } from "@/interfaces/auth.interface";
+import { IAuthService, UserProfile } from "@/interfaces/auth.interface";
 import createGrpcClient from "@/grpc/client";
 type IAuthUser = { id: string; email: string; displayName: string };
 import AppError from "@/utils/AppError";
@@ -33,5 +33,34 @@ export class AuthService implements IAuthService {
                 },
             );
         });
+    }
+    async getUserProfiles(userIds: string[]): Promise<UserProfile[]> {
+        const profiles: UserProfile[] = [];
+        const ids = [...new Set(userIds)];
+        for (let index = 0; index < ids.length; index += 200) {
+            const result = await new Promise<{ users: UserProfile[] }>(
+                (resolve, reject) => {
+                    authClient.GetUserProfiles(
+                        { userIds: ids.slice(index, index + 200) },
+                        { deadline: new Date(Date.now() + 3000) },
+                        (
+                            error: grpc.ServiceError | null,
+                            response: { users: UserProfile[] },
+                        ) => {
+                            if (error)
+                                reject(
+                                    new AppError(
+                                        StatusCode.ServiceUnavailable,
+                                        "Member profiles are unavailable",
+                                    ),
+                                );
+                            else resolve(response);
+                        },
+                    );
+                },
+            );
+            profiles.push(...result.users);
+        }
+        return profiles;
     }
 }
