@@ -1,3 +1,4 @@
+import { proxyError } from "./middlewares/proxy-error";
 import type { Express } from "express";
 import type { Server } from "node:http";
 import { Socket as NetSocket } from "node:net";
@@ -16,6 +17,7 @@ export function attachRealtimeProxy(
         changeOrigin: true,
         ws: false,
         on: {
+            error: proxyError,
             proxyReq: (proxyReq) => {
                 proxyReq.removeHeader("x-user-payload");
             },

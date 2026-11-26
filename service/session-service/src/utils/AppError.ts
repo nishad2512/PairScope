@@ -1,5 +1,9 @@
+import { StatusCode } from "./StatusEnum";
 class AppError extends Error {
-    constructor(public readonly statusCode: number, message: string) {
+    constructor(
+        public readonly statusCode: StatusCode,
+        message: string,
+    ) {
         super(message);
 
         this.name = this.constructor.name;

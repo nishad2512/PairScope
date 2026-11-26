@@ -28,7 +28,9 @@ export const verifyUser = async (
 
         return next();
     } catch (error) {
-        return res.status(401).json({ message: "Invalid or Expired Token" });
+        return res
+            .status(StatusCode.Unauthorized)
+            .json({ message: "Invalid or Expired Token" });
     }
 };
 
@@ -69,6 +71,8 @@ export const optionalAuth = async (
 
         return next();
     } catch (error) {
-        return res.status(401).json({ message: "Invalid or Expired Token" });
+        return res
+            .status(StatusCode.Unauthorized)
+            .json({ message: "Invalid or Expired Token" });
     }
 };

@@ -1,3 +1,4 @@
+import { handleError } from "./utils/error-handler";
 import { once } from "node:events";
 import { setTimeout as delay } from "node:timers/promises";
 import { ChannelModel, connect } from "amqplib";
@@ -40,8 +41,8 @@ async function start(): Promise<void> {
     while (!stopping) {
         try {
             connection = await connect(config.RABBITMQ_URL, { timeout: 10000 });
-            connection.on("error", () =>
-                console.error("RabbitMQ connection failed"),
+            connection.on("error", (error) =>
+                handleError(error, "RabbitMQ connection failed"),
             );
             const disconnected = once(connection, "close").catch(() => {});
             const publisher = await connection.createConfirmChannel();
@@ -64,11 +65,9 @@ async function start(): Promise<void> {
             await consumer.start();
             console.info("Email service is listening");
             await disconnected;
-        } catch {
+        } catch (error) {
             if (!stopping)
-                console.error(
-                    "Email service unavailable. Reconnecting in 5 seconds.",
-                );
+                handleError(error, "Reconnecting email service in 5 seconds");
         } finally {
             await consumer?.stop();
             await connection?.close().catch(() => {});
@@ -80,7 +79,7 @@ async function start(): Promise<void> {
     provider.close();
 }
 
-void start().catch(() => {
-    console.error("Email service stopped unexpectedly");
+void start().catch((error) => {
+    handleError(error, "Email service stopped unexpectedly");
     process.exitCode = 1;
 });

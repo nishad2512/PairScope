@@ -1,3 +1,4 @@
+import { StatusCode } from "../utils/StatusEnum";
 import { accessResponseSchema } from "../validator/access.validator";
 import { config } from "../config";
 import { Identity, SessionAccess } from "../types/events";
@@ -8,7 +9,10 @@ export const authorizeSession = async (
     identity: Identity,
 ): Promise<SessionAccess> => {
     if (identity.sessionId && identity.sessionId !== sessionId) {
-        throw new SocketError("FORBIDDEN", "This guest token belongs to another session.");
+        throw new SocketError(
+            "FORBIDDEN",
+            "This guest token belongs to another session.",
+        );
     }
 
     const response = await fetch(
@@ -28,12 +32,21 @@ export const authorizeSession = async (
         },
     );
 
-    if (response.status === 409) {
-        throw new SocketError("SESSION_CLOSED", "This session is no longer available.");
+    if (response.status === StatusCode.Conflict) {
+        throw new SocketError(
+            "SESSION_CLOSED",
+            "This session is no longer available.",
+        );
     }
 
-    if (response.status === 403 || response.status === 404) {
-        throw new SocketError("FORBIDDEN", "You are not a participant in this session.");
+    if (
+        response.status === StatusCode.Forbidden ||
+        response.status === StatusCode.NotFound
+    ) {
+        throw new SocketError(
+            "FORBIDDEN",
+            "You are not a participant in this session.",
+        );
     }
 
     if (!response.ok) {
@@ -47,10 +60,14 @@ export const authorizeSession = async (
     if (
         result.sessionId !== sessionId ||
         (identity.sessionId
-            ? result.participant.id !== identity.userId || result.participant.userId !== null
+            ? result.participant.id !== identity.userId ||
+              result.participant.userId !== null
             : result.participant.userId !== identity.userId)
     ) {
-        throw new SocketError("FORBIDDEN", "The participant does not match this connection.");
+        throw new SocketError(
+            "FORBIDDEN",
+            "The participant does not match this connection.",
+        );
     }
 
     return result;

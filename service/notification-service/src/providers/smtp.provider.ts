@@ -1,3 +1,4 @@
+import { SmtpStatus } from "../utils/SmtpStatusEnum";
 import nodemailer, { Transporter } from "nodemailer";
 import { Email, EmailProvider } from "../interfaces/email.interface";
 import { EmailError } from "../utils/email-error";
@@ -44,10 +45,10 @@ export class SmtpProvider implements EmailProvider {
         } catch (error) {
             if (error instanceof EmailError) throw error;
             const failure = error as { code?: string; responseCode?: number };
-            if (failure.code === "EAUTH" || failure.responseCode === 535) {
+            if (failure.code === "EAUTH" || failure.responseCode === SmtpStatus.AuthenticationFailed) {
                 throw new EmailError("SMTP_AUTH_FAILED", true);
             }
-            if (failure.responseCode && failure.responseCode >= 500) {
+            if (failure.responseCode && failure.responseCode >= SmtpStatus.PermanentFailure) {
                 throw new EmailError("SMTP_PERMANENT_FAILURE");
             }
             throw new EmailError("SMTP_TEMPORARY_FAILURE", true);

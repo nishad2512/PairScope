@@ -1,3 +1,6 @@
+import { proxyError } from "./middlewares/proxy-error";
+import { StatusCode } from "./utils/StatusEnum";
+import errHandler from "./middlewares/err-handler";
 import "dotenv/config";
 import express, { Request } from "express";
 import { createServer } from "http";
@@ -32,7 +35,7 @@ app.use(
         skip: (req) =>
             req.path === "/socket.io" || req.path.startsWith("/socket.io/"),
         handler: (_req, res) =>
-            res.status(429).json({
+            res.status(StatusCode.TooManyRequests).json({
                 success: false,
                 message: "Too many requests. Please try again later.",
             }),
@@ -49,6 +52,7 @@ app.use(
     createProxyMiddleware({
         target: process.env.AUTH_SERVICE_URL ?? "http://localhost:3001",
         pathFilter: "/api/auth/**",
+        on: { error: proxyError },
         changeOrigin: true,
         pathRewrite: { "^/api": "" },
         proxyTimeout: 10_000,
@@ -67,6 +71,7 @@ app.use(
         proxyTimeout: 10_000,
         timeout: 10_000,
         on: {
+            error: proxyError,
             proxyReq: (proxyReq, req: Request, _res) => {
                 proxyReq.removeHeader("x-user-payload");
 
@@ -91,6 +96,7 @@ app.use(
         proxyTimeout: 10_000,
         timeout: 10_000,
         on: {
+            error: proxyError,
             proxyReq: (proxyReq, req: Request) => {
                 proxyReq.removeHeader("x-user-payload");
                 proxyReq.removeHeader("x-internal-secret");
@@ -122,6 +128,7 @@ app.use(
         proxyTimeout: 10_000,
         timeout: 10_000,
         on: {
+            error: proxyError,
             proxyReq: (proxyReq, req: Request, _res) => {
                 proxyReq.removeHeader("x-user-payload");
                 proxyReq.removeHeader("x-internal-secret");
@@ -154,6 +161,7 @@ app.use(
         proxyTimeout: 10_000,
         timeout: 10_000,
         on: {
+            error: proxyError,
             proxyReq: (proxyReq, req: Request, _res) => {
                 proxyReq.removeHeader("x-user-payload");
                 proxyReq.removeHeader("x-internal-secret");
@@ -174,6 +182,13 @@ app.use(
         },
     }),
 );
+
+app.use((_req, res) =>
+    res
+        .status(StatusCode.NotFound)
+        .json({ success: false, message: "Route not found" }),
+);
+app.use(errHandler);
 
 httpServer.listen(PORT, () => {
     console.log(`Api Gateway running on port ${PORT}`);

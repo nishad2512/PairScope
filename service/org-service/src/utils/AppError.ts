@@ -1,6 +1,7 @@
+import { StatusCode } from "./StatusEnum";
 class AppError extends Error {
     constructor(
-        public readonly statusCode: number,
+        public readonly statusCode: StatusCode,
         message: string,
     ) {
         super(message);

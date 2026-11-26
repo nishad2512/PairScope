@@ -1,3 +1,4 @@
+import { handleError } from "../utils/error-handler";
 import { Channel, ConfirmChannel, ConsumeMessage } from "amqplib";
 import { IEmailService } from "../interfaces/email.interface";
 import { parseEmailEvent } from "../validator/email.validator";
@@ -23,9 +24,10 @@ export class EmailConsumer {
             queues.email,
             (message) => {
                 if (!message) return this.closeConnection();
-                this.pending = this.handle(message).catch(() => {
-                    console.error(
-                        "Could not transfer email. Reconnecting before redelivery.",
+                this.pending = this.handle(message).catch((error) => {
+                    handleError(
+                        error,
+                        "Email transfer failed; reconnecting before redelivery",
                     );
                     this.closeConnection();
                 });
@@ -58,9 +60,10 @@ export class EmailConsumer {
             this.channel.ack(message);
             console.info(`Email ${event.eventId}: ${status}`);
         } catch (error) {
-            const failure =
-                error instanceof EmailError ? error.code : "EMAIL_UNAVAILABLE";
-            const retryable = !(error instanceof EmailError) || error.retryable;
+            const { code: failure, retryable } = handleError(
+                error,
+                "Email delivery failed",
+            );
             const retry = retryable && attempt < this.retryDelays.length;
 
             // Confirm the transfer before removing the original message.

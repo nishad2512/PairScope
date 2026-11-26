@@ -1,3 +1,5 @@
+import { StatusCode } from "./utils/StatusEnum";
+import errHandler from "./middlewares/err-handler";
 import express from "express";
 import { createServer } from "http";
 import { config } from "./config";
@@ -14,11 +16,18 @@ const startServer = async (): Promise<void> => {
 
     app.get("/health", (_req, res) => {
         const ready = realtime.ready();
-        res.status(ready ? 200 : 503).json({
+        res.status(ready ? StatusCode.Ok : StatusCode.ServiceUnavailable).json({
             status: ready ? "ok" : "unavailable",
             service: "realtime-service",
         });
     });
+
+    app.use((_req, res) =>
+        res
+            .status(StatusCode.NotFound)
+            .json({ success: false, message: "Route not found" }),
+    );
+    app.use(errHandler);
 
     httpServer.listen(PORT, () => {
         console.log(`Realtime service running on port ${PORT}`);
@@ -47,6 +56,8 @@ const startServer = async (): Promise<void> => {
 };
 
 startServer().catch(() => {
-    console.error("Realtime startup failed. Check configuration and Redis availability.");
+    console.error(
+        "Realtime startup failed. Check configuration and Redis availability.",
+    );
     process.exitCode = 1;
 });

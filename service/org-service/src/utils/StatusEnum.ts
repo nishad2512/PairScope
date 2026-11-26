@@ -16,6 +16,8 @@ export enum StatusCode {
     NotFound = 404,
     MethodNotAllowed = 405,
     Conflict = 409,
+    PayloadTooLarge = 413,
+    TooManyRequests = 429,
 
     // 5xx Server Errors
     InternalServerError = 500,

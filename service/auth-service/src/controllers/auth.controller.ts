@@ -64,6 +64,6 @@ export class AuthController {
 
     public async me(req: Request, res: Response) {
         const user = await this.serv.me(req.user!.userId);
-        res.json({ user });
+        res.status(StatusCode.Ok).json({ user });
     }
 }

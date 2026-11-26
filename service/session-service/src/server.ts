@@ -1,3 +1,4 @@
+import { StatusCode } from "./utils/StatusEnum";
 import express from "express";
 import "reflect-metadata";
 import "./utils/container";
@@ -13,6 +14,11 @@ app.use(express.json({ limit: "32kb" }));
 app.use("/sessions", sessionRoutes);
 app.use("/internal", internalRoutes);
 
+app.use((_req, res) =>
+    res
+        .status(StatusCode.NotFound)
+        .json({ success: false, message: "Route not found" }),
+);
 app.use(errHandler);
 
 app.listen(PORT, () => {
