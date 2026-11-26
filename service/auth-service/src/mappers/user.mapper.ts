@@ -9,7 +9,9 @@ export function toUserResponse(user: IUser) {
         avatar: user.avatarUrl,
     };
 }
-export function toUserProfile(user: IUser) {
+export function toUserProfile(
+    user: Pick<IUser, "id" | "displayName" | "avatarUrl">,
+) {
     return {
         id: user.id!,
         displayName: user.displayName,

@@ -4,7 +4,9 @@ import { IUser } from "../models/user.model";
 export interface IUserRepo {
     createUser(user: IUser): Promise<IUser>;
     getUserByEmail(email: string): Promise<IUser | null>;
-    getUsersByIds(ids: string[]): Promise<IUser[]>;
+    getUsersByIds(
+        ids: string[],
+    ): Promise<Pick<IUser, "id" | "displayName" | "avatarUrl">[]>;
     getUserById(id: string): Promise<IUser | null>;
     updateUser(id: string, user: Partial<Omit<IUser, "id">>): Promise<void>;
     deleteUser(id: string): Promise<void>;

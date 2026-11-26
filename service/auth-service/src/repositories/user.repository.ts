@@ -39,9 +39,18 @@ export class UserRepository implements IUserRepo {
         return user || null;
     }
 
-    async getUsersByIds(ids: string[]): Promise<IUser[]> {
+    async getUsersByIds(
+        ids: string[],
+    ): Promise<Pick<IUser, "id" | "displayName" | "avatarUrl">[]> {
         if (!ids.length) return [];
-        return db.select().from(users).where(inArray(users.id, ids));
+        return db
+            .select({
+                id: users.id,
+                displayName: users.displayName,
+                avatarUrl: users.avatarUrl,
+            })
+            .from(users)
+            .where(inArray(users.id, ids));
     }
 
     async updateUser(
