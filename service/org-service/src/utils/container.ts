@@ -26,22 +26,33 @@ import { container } from "tsyringe";
 
 // organizations
 
-container.register<IOrgRepository>("IOrgRepository", { useFactory: () => new OrgRepository() });
+container.register<IOrgRepository>("IOrgRepository", {
+    useFactory: () => new OrgRepository(),
+});
 container.registerSingleton<IOrgService>("IOrgService", OrgService);
 container.registerSingleton<IOrgController>("IOrgController", OrgController);
 
 // org - membership
 
-container.register<IMemberRepository>("IMemberRepository", { useFactory: () => new MemberRepository() });
+container.register<IMemberRepository>("IMemberRepository", {
+    useFactory: () => new MemberRepository(),
+});
 container.registerSingleton<IMemberService>("IMemberService", MemberService);
 container.registerSingleton<IMemberController>(
     "IMemberController",
     MemberController,
 );
 
-container.register("IInvitationRepository", { useFactory: () => new InvitationRepository() });
-container.register("IInvitationTransaction", { useFactory: () => new InvitationTransaction() });
+container.register("IInvitationRepository", {
+    useFactory: () => new InvitationRepository(),
+});
+container.register("IInvitationTransaction", {
+    useFactory: () => new InvitationTransaction(),
+});
 container.register("IAuthService", { useFactory: () => new AuthService() });
 container.registerSingleton<IEmailPublisher>("IEmailPublisher", EmailPublisher);
-container.registerSingleton<IInvitationService>("IInvitationService", InvitationService);
+container.registerSingleton<IInvitationService>(
+    "IInvitationService",
+    InvitationService,
+);
 container.registerSingleton("InvitationController", InvitationController);

@@ -11,7 +11,10 @@ export function toInvitationEmail(email: InvitationEmail, frontendUrl: string) {
             recipientEmail: email.recipientEmail,
             inviterName: email.inviterName,
             organizationName: email.organizationName,
-            invitationUrl: new URL(`/organizations/join/${email.token}`, frontendUrl).href,
+            invitationUrl: new URL(
+                `/organizations/join/${email.token}`,
+                frontendUrl,
+            ).href,
             expiresAt: email.expiresAt.toISOString(),
         },
     };

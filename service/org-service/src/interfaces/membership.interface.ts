@@ -19,7 +19,11 @@ export interface IMemberRepository {
 
 export interface IMemberService {
     getMembersByOrg(orgId: string, userId: string): Promise<IOrgMember[]>;
-    getMemberById(memId: string, orgId: string, userId: string): Promise<IOrgMember>;
+    getMemberById(
+        memId: string,
+        orgId: string,
+        userId: string,
+    ): Promise<IOrgMember>;
     deleteMember(memId: string, orgId: string, userId: string): Promise<void>;
 }
 

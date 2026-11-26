@@ -73,6 +73,10 @@ services:
     container_name: org-service
     environment:
       DATABASE_URL: postgresql://pairscope:PairScope@postgres/org
+      GRPC_AUTH_URL: auth-service:50051
+      INTERNAL_SERVICE_SECRET: pairScopeInternalSecret
+      RABBITMQ_URL: amqp://notification:local-notification-password@rabbitmq:5672
+      FRONTEND_URL: http://localhost:5173
     ports:
       - "3003:3003"
     depends_on:

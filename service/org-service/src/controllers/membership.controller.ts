@@ -17,7 +17,10 @@ export class MemberController implements IMemberController {
         const orgId = req.params.orgId as string;
         const result = await this.serv.getMembersByOrg(orgId, req.user!.userId);
 
-        res.status(StatusCode.Ok).json({ data: result.map(toMemberResponse) });
+        res.status(StatusCode.Ok).json({
+            data: result.map(toMemberResponse),
+            currentUserId: req.user!.userId,
+        });
     }
 
     async getMemberById(req: Request, res: Response): Promise<void> {
@@ -33,7 +36,11 @@ export class MemberController implements IMemberController {
 
     async deleteMember(req: Request, res: Response): Promise<void> {
         const { orgId, memId } = req.params;
-        await this.serv.deleteMember(memId as string, orgId as string, req.user!.userId);
+        await this.serv.deleteMember(
+            memId as string,
+            orgId as string,
+            req.user!.userId,
+        );
 
         res.status(StatusCode.Ok).json({ success: true });
     }

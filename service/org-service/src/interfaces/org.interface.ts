@@ -30,16 +30,3 @@ export interface IOrgController {
     getOrgById(req: Request, res: Response): Promise<void>;
     getOrgBySlug(req: Request, res: Response): Promise<void>;
 }
-
-// export interface IOrg {
-//     id?: string,
-//     name: string,
-//     slug: string,
-//     password: string,
-//     tier: string,
-//     tierId: string | null,
-//     ownerId: string,
-//     isActive: boolean,
-//     createdAt?: Date,
-//     updatedAt?: Date
-// }

@@ -6,5 +6,8 @@ export const createInvitationSchema = z.object({
 });
 export const orgIdSchema = z.uuid();
 export const invitationTokenSchema = z.string().regex(/^[a-f0-9]{64}$/i);
-export const accessPayloadSchema = z.object({ userId: z.uuid(), sessionId: z.uuid().optional() });
+export const accessPayloadSchema = z.object({
+    userId: z.uuid(),
+    sessionId: z.uuid().optional(),
+});
 export type CreateInvitationDTO = z.infer<typeof createInvitationSchema>;

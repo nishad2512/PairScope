@@ -1,16 +1,15 @@
-import { API_ROUTES } from '../constants/api.routes';
-import { apiClient } from './client';
+import { API_ROUTES } from "../constants/api.routes";
+import { apiClient } from "./client";
 import type {
     CreatedOrg,
     MemberRole,
     OrgMember,
     Organization,
-} from '../types/api.types';
+} from "../types/api.types";
 
 export async function createOrg(input: {
     name: string;
     slug: string;
-    password: string;
 }): Promise<CreatedOrg> {
     const body = (await apiClient.post(
         API_ROUTES.ORGANIZATIONS.BASE,
@@ -35,25 +34,40 @@ export async function getOrgById(orgId: string): Promise<Organization> {
 
 export async function getOrgBySlug(slug: string): Promise<Organization> {
     const body = (await apiClient.get(API_ROUTES.ORGANIZATIONS.BY_SLUG, {
-        headers: { 'x-org-subdomain': slug },
+        headers: { "x-org-subdomain": slug },
     })) as unknown as { data: Organization };
     return body.data;
 }
 
-export async function getMembers(orgId: string): Promise<OrgMember[]> {
+export async function getMembers(
+    orgId: string,
+): Promise<{ members: OrgMember[]; currentUserId: string }> {
     const body = (await apiClient.get(
         API_ROUTES.ORGANIZATIONS.MEMBERS(orgId),
-    )) as unknown as { data: OrgMember[] };
+    )) as unknown as { data: OrgMember[]; currentUserId: string };
+    return { members: body.data, currentUserId: body.currentUserId };
+}
+
+export interface OrganizationInvitation {
+    token: string;
+    emailStatus: "queued" | "failed";
+}
+
+export async function inviteMember(
+    orgId: string,
+    input: { email: string; role: MemberRole },
+): Promise<OrganizationInvitation> {
+    const body = (await apiClient.post(
+        `/organizations/${orgId}/invite`,
+        input,
+    )) as unknown as { data: OrganizationInvitation };
     return body.data;
 }
 
-export async function addMember(
-    orgId: string,
-    input: { userId: string; role: MemberRole },
-): Promise<OrgMember> {
+export async function joinOrganization(token: string): Promise<OrgMember> {
     const body = (await apiClient.post(
-        API_ROUTES.ORGANIZATIONS.MEMBERS(orgId),
-        input,
+        `/organizations/join/${encodeURIComponent(token)}`,
+        {},
     )) as unknown as { data: OrgMember };
     return body.data;
 }

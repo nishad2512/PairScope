@@ -2,22 +2,28 @@ import { InvitationController } from "@/controllers/invitation.controller";
 import { createInvitationSchema } from "@/validators/invitation.validator";
 import { MemberController } from "@/controllers/membership.controller";
 import { OrgController } from "@/controllers/org.controller";
-import { getUser, verifyService, requireRegister } from "@/middlewares/auth.middleware";
-import validate from "@/middlewares/validation";
 import {
-    createOrgSchema,
-} from "@/validators/org.validator";
+    getUser,
+    verifyService,
+    requireRegister,
+} from "@/middlewares/auth.middleware";
+import validate from "@/middlewares/validation";
+import { createOrgSchema } from "@/validators/org.validator";
 import { Router } from "express";
 import { container } from "tsyringe";
 
 const router = Router();
 const orgController = container.resolve(OrgController);
 const memController = container.resolve(MemberController);
-
 const invitations = container.resolve(InvitationController);
+
 router.use(verifyService, getUser, requireRegister);
 router.post("/join/:token", invitations.join.bind(invitations));
-router.post("/:orgId/invite", validate(createInvitationSchema), invitations.create.bind(invitations));
+router.post(
+    "/:orgId/invite",
+    validate(createInvitationSchema),
+    invitations.create.bind(invitations),
+);
 
 router
     .route("/")

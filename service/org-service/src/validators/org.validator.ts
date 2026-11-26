@@ -6,4 +6,3 @@ export const createOrgSchema = z.object({
 });
 
 export type CreateOrgDTO = z.infer<typeof createOrgSchema>;
-

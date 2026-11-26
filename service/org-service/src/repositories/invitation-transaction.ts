@@ -8,15 +8,19 @@ import { MemberRepository } from "./membership.repository";
 import { OrgRepository } from "./org.repository";
 
 export class InvitationTransaction implements IInvitationTransaction {
-    run<T>(action: (repositories: {
-        invitations: IInvitationRepository;
-        members: IMemberRepository;
-        orgs: IOrgRepository;
-    }) => Promise<T>): Promise<T> {
-        return db.transaction((tx) => action({
-            invitations: new InvitationRepository(tx),
-            members: new MemberRepository(tx),
-            orgs: new OrgRepository(tx),
-        }));
+    run<T>(
+        action: (repositories: {
+            invitations: IInvitationRepository;
+            members: IMemberRepository;
+            orgs: IOrgRepository;
+        }) => Promise<T>,
+    ): Promise<T> {
+        return db.transaction((tx) =>
+            action({
+                invitations: new InvitationRepository(tx),
+                members: new MemberRepository(tx),
+                orgs: new OrgRepository(tx),
+            }),
+        );
     }
 }

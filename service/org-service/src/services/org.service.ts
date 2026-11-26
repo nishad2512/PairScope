@@ -81,7 +81,10 @@ export class OrgService implements IOrgService {
 
         const membership = await this.membRepo.getMemberByUser(userId, org.id);
         if (!org.isActive || !membership?.isActive) {
-            throw new AppError(StatusCode.Forbidden, "Organization membership is required");
+            throw new AppError(
+                StatusCode.Forbidden,
+                "Organization membership is required",
+            );
         }
         return org;
     }
@@ -98,7 +101,10 @@ export class OrgService implements IOrgService {
 
         const membership = await this.membRepo.getMemberByUser(userId, org.id);
         if (!org.isActive || !membership?.isActive) {
-            throw new AppError(StatusCode.Forbidden, "Organization membership is required");
+            throw new AppError(
+                StatusCode.Forbidden,
+                "Organization membership is required",
+            );
         }
         return org;
     }

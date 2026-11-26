@@ -3,7 +3,7 @@ import type { FormEvent } from "react";
 import { Link, useParams } from "react-router";
 import { Building2, Plus, Users, Trash2 } from "lucide-react";
 import {
-    addMember,
+    inviteMember,
     getMembers,
     getMyOrgs,
     getOrgById,
@@ -104,10 +104,23 @@ export function OrganizationDetails() {
         const org = /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(orgId)
             ? await getOrgById(orgId)
             : await getOrgBySlug(orgId);
-        return { org, members: org.id ? await getMembers(org.id) : [] };
+        const result = org.id
+            ? await getMembers(org.id)
+            : { members: [], currentUserId: "" };
+        return {
+            org,
+            members: result.members,
+            role: result.members.find(
+                (member) => member.userId === result.currentUserId,
+            )?.role,
+        };
     }, [orgId]);
     const { data, loading, error, reload } = useResource(load);
     const [adding, setAdding] = useState(false);
+    const [invitation, setInvitation] = useState<{
+        token: string;
+        emailStatus: "queued" | "failed";
+    } | null>(null);
     const [removing, setRemoving] = useState<OrgMember | null>(null);
     const [busy, setBusy] = useState(false);
     const [actionError, setActionError] = useState("");
@@ -118,12 +131,11 @@ export function OrganizationDetails() {
         setBusy(true);
         setActionError("");
         try {
-            await addMember(data.org.id, {
-                userId: String(form.get("userId")).trim(),
+            const invitation = await inviteMember(data.org.id, {
+                email: String(form.get("email")).trim(),
                 role: String(form.get("role")) as MemberRole,
             });
-            setAdding(false);
-            reload();
+            setInvitation(invitation);
         } catch (error) {
             setActionError(errorMessage(error));
         } finally {
@@ -152,6 +164,7 @@ export function OrganizationDetails() {
                 <Button onClick={reload}>Try again</Button>
             </>
         );
+    const canManage = data.role === "OWNER" || data.role === "ADMIN";
     return (
         <>
             <Link className="text-link back-link" to="/organizations">
@@ -169,12 +182,13 @@ export function OrganizationDetails() {
                 <Button
                     onClick={() => {
                         setActionError("");
+                        setInvitation(null);
                         setAdding(true);
                     }}
-                    disabled={!data.org.id}
+                    disabled={!data.org.id || !canManage}
                 >
                     <Plus size={18} />
-                    Add member
+                    Invite member
                 </Button>
             </div>
             <section className="panel">
@@ -202,59 +216,84 @@ export function OrganizationDetails() {
                                     <small>{member.userId}</small>
                                 </div>
                                 <Badge>{readable(member.role)}</Badge>
-                                {member.role !== "OWNER" && member.id && (
-                                    <button
-                                        className="icon-button"
-                                        aria-label={`Remove member ${member.userId}`}
-                                        onClick={() => {
-                                            setActionError("");
-                                            setRemoving(member);
-                                        }}
-                                    >
-                                        <Trash2 size={17} />
-                                    </button>
-                                )}
+                                {canManage &&
+                                    member.role !== "OWNER" &&
+                                    (member.role !== "ADMIN" ||
+                                        data.role === "OWNER") &&
+                                    member.id && (
+                                        <button
+                                            className="icon-button"
+                                            aria-label={`Remove member ${member.userId}`}
+                                            onClick={() => {
+                                                setActionError("");
+                                                setRemoving(member);
+                                            }}
+                                        >
+                                            <Trash2 size={17} />
+                                        </button>
+                                    )}
                             </div>
                         ))}
                     </div>
                 ) : (
                     <EmptyState icon={<Users />} title="Room for your people.">
-                        Add an existing user to start building your team.
+                        Invite a registered user to start building your team.
                     </EmptyState>
                 )}
             </section>
             {adding && (
                 <Modal
                     title="Bring someone in."
-                    description="Add an existing PairScope user to this organization."
+                    description="Invite a registered PairScope user by email. They join after accepting."
                     onClose={() => setAdding(false)}
                 >
-                    <form className="form-stack" onSubmit={add}>
-                        {actionError && <Notice>{actionError}</Notice>}
-                        <Field
-                            label="User ID"
-                            name="userId"
-                            placeholder="Enter their user ID"
-                            required
-                            pattern="[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
-                            title="Enter a valid UUID"
-                            hint="Use the user’s account ID, rather than their email address."
-                        />
-                        <Select label="Role" name="role">
-                            <option value="INTERVIEWER">Interviewer</option>
-                            <option value="ADMIN">Admin</option>
-                        </Select>
-                        <div className="modal-actions">
-                            <Button
-                                variant="secondary"
-                                type="button"
-                                onClick={() => setAdding(false)}
-                            >
-                                Cancel
+                    {invitation ? (
+                        <div className="form-stack">
+                            <p>
+                                {invitation.emailStatus === "queued"
+                                    ? "Invitation email queued. They can join using the link below."
+                                    : "The email could not be queued. Share this link with the invited person."}
+                            </p>
+                            <Field
+                                label="Invitation link"
+                                readOnly
+                                value={`${window.location.origin}/organizations/join/${invitation.token}`}
+                                onFocus={(event) =>
+                                    event.currentTarget.select()
+                                }
+                            />
+                            <Button onClick={() => setAdding(false)}>
+                                Done
                             </Button>
-                            <Button busy={busy}>Add member</Button>
                         </div>
-                    </form>
+                    ) : (
+                        <form className="form-stack" onSubmit={add}>
+                            {actionError && <Notice>{actionError}</Notice>}
+                            <Field
+                                label="Email address"
+                                name="email"
+                                type="email"
+                                placeholder="teammate@example.com"
+                                required
+                            />
+                            <Select label="Role" name="role">
+                                <option value="INTERVIEWER">Interviewer</option>
+                                {data.role === "OWNER" && (
+                                    <option value="ADMIN">Admin</option>
+                                )}
+                            </Select>
+                            <div className="modal-actions">
+                                <Button
+                                    variant="secondary"
+                                    type="button"
+                                    onClick={() => setAdding(false)}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button busy={busy}>Invite member</Button>
+                            </div>
+                        </form>
+                    )}
                 </Modal>
             )}
             {removing && (

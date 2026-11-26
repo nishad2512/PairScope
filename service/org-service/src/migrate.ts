@@ -8,7 +8,9 @@ async function migrate(): Promise<void> {
     await client.connect();
     try {
         await client.query("BEGIN");
-        await client.query(await readFile("migrations/001_membership_invitations.sql", "utf8"));
+        await client.query(
+            await readFile("migrations/001_membership_invitations.sql", "utf8"),
+        );
         await client.query("COMMIT");
         console.info("Organization invitations migration completed");
     } catch (error) {
@@ -19,6 +21,8 @@ async function migrate(): Promise<void> {
     }
 }
 void migrate().catch(() => {
-    console.error("Migration failed. Check the database schema and duplicate memberships.");
+    console.error(
+        "Migration failed. Check the database schema and duplicate memberships.",
+    );
     process.exitCode = 1;
 });

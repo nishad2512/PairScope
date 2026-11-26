@@ -29,7 +29,10 @@ export class MemberRepository implements IMemberRepository {
     }
 
     async create(member: typeof members.$inferInsert): Promise<IOrgMember> {
-        const [newMember] = await this.database.insert(members).values(member).returning();
+        const [newMember] = await this.database
+            .insert(members)
+            .values(member)
+            .returning();
 
         if (!newMember) {
             throw new AppError(
@@ -74,10 +77,17 @@ export class MemberRepository implements IMemberRepository {
         return orgMember || null;
     }
 
-    async reactivate(id: string, role: IOrgMember["role"]): Promise<IOrgMember> {
-        const [member] = await this.database.update(members).set({ isActive: true, role })
-            .where(eq(members.id, id)).returning();
-        if (!member) throw new AppError(StatusCode.NotFound, "Membership not found");
+    async reactivate(
+        id: string,
+        role: IOrgMember["role"],
+    ): Promise<IOrgMember> {
+        const [member] = await this.database
+            .update(members)
+            .set({ isActive: true, role })
+            .where(eq(members.id, id))
+            .returning();
+        if (!member)
+            throw new AppError(StatusCode.NotFound, "Membership not found");
         return member;
     }
 

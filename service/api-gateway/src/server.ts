@@ -29,7 +29,8 @@ app.use(
         limit: 100,
         standardHeaders: "draft-8",
         legacyHeaders: false,
-        skip: (req) => req.path === "/socket.io" || req.path.startsWith("/socket.io/"),
+        skip: (req) =>
+            req.path === "/socket.io" || req.path.startsWith("/socket.io/"),
         handler: (_req, res) =>
             res.status(429).json({
                 success: false,
@@ -38,7 +39,11 @@ app.use(
     }),
 );
 
-attachRealtimeProxy(app, httpServer, process.env.REALTIME_SERVICE_URL ?? "http://localhost:3004");
+attachRealtimeProxy(
+    app,
+    httpServer,
+    process.env.REALTIME_SERVICE_URL ?? "http://localhost:3004",
+);
 
 app.use(
     createProxyMiddleware({
@@ -151,6 +156,13 @@ app.use(
         on: {
             proxyReq: (proxyReq, req: Request, _res) => {
                 proxyReq.removeHeader("x-user-payload");
+                proxyReq.removeHeader("x-internal-secret");
+                if (process.env.INTERNAL_SERVICE_SECRET) {
+                    proxyReq.setHeader(
+                        "x-internal-secret",
+                        process.env.INTERNAL_SERVICE_SECRET,
+                    );
+                }
 
                 if (req.user) {
                     proxyReq.setHeader(

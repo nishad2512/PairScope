@@ -9,14 +9,14 @@ export class OrgController implements IOrgController {
     constructor(@inject("IOrgService") private readonly serv: IOrgService) {}
 
     async create(req: Request, res: Response): Promise<void> {
-        const ownerId = req.user.userId;
+        const ownerId = req.user!.userId;
         const result = await this.serv.create(req.body, ownerId);
 
         res.status(StatusCode.Created).json({ data: result });
     }
 
     async getUserOrgs(req: Request, res: Response): Promise<void> {
-        const ownerId = req.user.userId;
+        const ownerId = req.user!.userId;
         const result = await this.serv.getOrgs(ownerId);
 
         res.status(StatusCode.Ok).json({ data: result });

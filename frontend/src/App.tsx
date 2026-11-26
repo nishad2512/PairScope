@@ -19,6 +19,7 @@ import Sessions from "./pages/session/Sessions";
 import SessionData from "./pages/session/SessionData";
 import Organizations, { OrganizationDetails } from "./pages/org/Dashboard";
 import Join from "./pages/session/Join";
+import JoinOrganization from "./pages/org/Join";
 const Editor = lazy(() => import("./pages/session/Editor"));
 
 let initialRestore: Promise<boolean> | undefined;
@@ -53,12 +54,22 @@ export default function App() {
                 <Route
                     path="/sessions/:sessionId/editor"
                     element={
-                        <Suspense fallback={<div className="boot-screen"><Loading /></div>}>
+                        <Suspense
+                            fallback={
+                                <div className="boot-screen">
+                                    <Loading />
+                                </div>
+                            }
+                        >
                             <Editor />
                         </Suspense>
                     }
                 />
                 <Route element={<RequireAuth />}>
+                    <Route
+                        path="/organizations/join/:token"
+                        element={<JoinOrganization />}
+                    />
                     <Route element={<AppLayout />}>
                         <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/sessions" element={<Sessions />} />

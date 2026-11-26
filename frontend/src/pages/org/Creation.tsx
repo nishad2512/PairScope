@@ -18,7 +18,6 @@ export default function Creation({ onClose }: { onClose: () => void }) {
             const created = await createOrg({
                 name: String(form.get("name")).trim(),
                 slug: String(form.get("slug")).trim(),
-                password: String(form.get("password")),
             });
             onClose();
             navigate(
@@ -56,15 +55,6 @@ export default function Creation({ onClose }: { onClose: () => void }) {
                     required
                     minLength={3}
                     maxLength={20}
-                />
-                <Field
-                    label="Organization password"
-                    name="password"
-                    type="password"
-                    autoComplete="new-password"
-                    minLength={8}
-                    maxLength={64}
-                    required
                 />
                 <div className="modal-actions">
                     <Button
