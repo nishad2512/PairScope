@@ -1,0 +1,64 @@
+services:
+  rabbitmq:
+    image: rabbitmq:4.2-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: notification
+      RABBITMQ_DEFAULT_PASS: local-notification-password
+    ports:
+      - "127.0.0.1:${NOTIFICATION_AMQP_PORT:-5673}:5672"
+      - "127.0.0.1:${NOTIFICATION_RABBIT_UI_PORT:-15673}:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: notification
+      POSTGRES_PASSWORD: local-notification-password
+      POSTGRES_DB: notification
+    ports:
+      - "127.0.0.1:${NOTIFICATION_DB_PORT:-5434}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U notification -d notification"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports:
+      - "127.0.0.1:${NOTIFICATION_SMTP_PORT:-1026}:1025"
+      - "127.0.0.1:${NOTIFICATION_MAIL_UI_PORT:-8026}:8025"
+
+  notification-service:
+    build:
+      context: ../..
+      dockerfile: service/notification-service/Dockerfile
+    environment:
+      RABBITMQ_URL: amqp://notification:local-notification-password@rabbitmq:5672
+      DATABASE_URL: postgresql://notification:local-notification-password@postgres:5432/notification
+      FRONTEND_URL: http://localhost:5173
+      EMAIL_FROM: notifications@pairscope.local
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      SMTP_REQUIRE_TLS: "false"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    stop_grace_period: 40s
+
+volumes:
+  rabbitmq_data:
+  postgres_data:
