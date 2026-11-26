@@ -141,7 +141,7 @@ function OrganizationInvitation({ token }: { token: string }) {
                         </h1>
                         <p>
                             {member
-                                ? `You’ve joined as ${readable(member.role).toLowerCase()}. Your workspace is ready.`
+                                ? `You’ve joined as an ${readable(member.role).toLowerCase()}. Your workspace is ready.`
                                 : unavailable
                                   ? "Ask an organization owner or admin for a fresh invitation."
                                   : wrongAccount
