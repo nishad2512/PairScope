@@ -6,6 +6,7 @@ import AppError from "@/utils/AppError";
 import { StatusCode } from "@/utils/StatusEnum";
 import { CreateInviteDTO, JoinInviteDTO } from "@/validators/invite.validator";
 import { ISession } from "@/models/session.model";
+import { IEmailPublisher } from "@/interfaces/email.interface";
 import {
     CreateSessionDTO,
     RealtimeAccessDTO,
@@ -26,6 +27,7 @@ export class SessionService {
         private readonly participantRepo: ParticipantRepository,
         @inject("InvitationRepository")
         private readonly inviteRepo: InvitationRepository,
+        @inject("IEmailPublisher") private readonly emailPublisher: IEmailPublisher,
     ) {}
 
     async create(dto: CreateSessionDTO, userId: string) {
@@ -143,7 +145,26 @@ export class SessionService {
             tokenHash: hashToken(token),
         });
 
-        return { invitation, token };
+        let emailStatus: "not_requested" | "queued" | "failed" = "not_requested";
+        if (dto.email) {
+            try {
+                await this.emailPublisher.publishInvitation({
+                    invitationId: invitation.id,
+                    sessionId,
+                    recipientEmail: dto.email,
+                    inviterName: "The session owner",
+                    sessionTitle: session.title,
+                    token,
+                    expiresAt: invitation.expiresAt,
+                });
+                emailStatus = "queued";
+            } catch {
+                console.error(`Could not queue email for invitation ${invitation.id}`);
+                emailStatus = "failed";
+            }
+        }
+
+        return { invitation, token, emailStatus };
     }
 
     async joinInvitation(
