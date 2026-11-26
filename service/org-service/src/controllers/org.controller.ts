@@ -24,7 +24,7 @@ export class OrgController implements IOrgController {
 
     async getOrgById(req: Request, res: Response): Promise<void> {
         const orgId = req.params.orgId as string;
-        const result = await this.serv.getOrgById(orgId);
+        const result = await this.serv.getOrgById(orgId, req.user!.userId);
 
         res.status(StatusCode.Ok).json({ data: result });
     }
@@ -38,7 +38,7 @@ export class OrgController implements IOrgController {
             );
         }
 
-        const result = await this.serv.getOrgBySlug(slug);
+        const result = await this.serv.getOrgBySlug(slug, req.user!.userId);
 
         res.status(StatusCode.Ok).json({ data: result });
     }

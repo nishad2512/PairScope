@@ -1,91 +1,42 @@
-import {
-    IMemberRepository,
-    IMemberService,
-    IOrgMember,
-} from "@/interfaces/membership.interface";
+import { IMemberRepository, IMemberService, IOrgMember } from "@/interfaces/membership.interface";
 import AppError from "@/utils/AppError";
 import { StatusCode } from "@/utils/StatusEnum";
-import { CreateMemberDTO } from "@/validators/org.validator";
+import { orgIdSchema } from "@/validators/invitation.validator";
 import { inject, injectable } from "tsyringe";
-
-const uuidRegex =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 @injectable()
 export class MemberService implements IMemberService {
-    constructor(
-        @inject("IMemberRepository") private readonly memRepo: IMemberRepository,
-    ) {}
+    constructor(@inject("IMemberRepository") private readonly memRepo: IMemberRepository) {}
 
-    async create(
-        dto: CreateMemberDTO,
-        orgId: string,
-        userId: string,
-    ): Promise<IOrgMember> {
-        const isValidOrg = uuidRegex.test(orgId);
-        if (!isValidOrg) {
-            throw new AppError(
-                StatusCode.BadRequest,
-                "Invalid organization credentials",
-            );
+    private async authorize(orgId: string, userId: string, manage = false) {
+        orgIdSchema.parse(orgId);
+        const member = await this.memRepo.getMemberByUser(userId, orgId);
+        if (!member?.isActive || (manage && !["OWNER", "ADMIN"].includes(member.role))) {
+            throw new AppError(StatusCode.Forbidden, "Organization membership is required for this action");
         }
-
-        const userAuth = await this.memRepo.getMemberByUser(userId, orgId);
-        if (!userAuth || userAuth.role === "INTERVIEWER") {
-            throw new AppError(
-                StatusCode.Unauthorized,
-                "You are not authorized to do this action",
-            );
-        }
-
-        return await this.memRepo.create({
-            ...dto,
-            orgId,
-        });
-    }
-
-    async getMembersByOrg(orgId: string): Promise<IOrgMember[]> {
-        const isValidUuid = uuidRegex.test(orgId);
-        if (!isValidUuid) {
-            throw new AppError(
-                StatusCode.BadRequest,
-                "Invalid organization credentials",
-            );
-        }
-        return await this.memRepo.getMembersByOrg(orgId);
-    }
-
-    async getMemberById(memId: string, orgId: string): Promise<IOrgMember> {
-        const isValidMem = uuidRegex.test(memId);
-        const isValidOrg = uuidRegex.test(orgId);
-
-        if (!isValidMem || !isValidOrg) {
-            throw new AppError(
-                StatusCode.BadRequest,
-                "Invalid member credentials",
-            );
-        }
-
-        const member = await this.memRepo.getMemberById(memId, orgId);
-        if (!member) {
-            throw new AppError(
-                StatusCode.BadRequest,
-                "Invalid member or organization credentials",
-            );
-        }
-
         return member;
     }
 
-    async deleteMember(memId: string, orgId: string): Promise<void> {
-        const isValidMem = uuidRegex.test(memId);
-        const isValidOrg = uuidRegex.test(orgId);
+    async getMembersByOrg(orgId: string, userId: string): Promise<IOrgMember[]> {
+        await this.authorize(orgId, userId);
+        return this.memRepo.getMembersByOrg(orgId);
+    }
 
-        if (!isValidMem || !isValidOrg) {
-            throw new AppError(
-                StatusCode.BadRequest,
-                "Invalid member credentials",
-            );
+    async getMemberById(memId: string, orgId: string, userId: string): Promise<IOrgMember> {
+        await this.authorize(orgId, userId);
+        orgIdSchema.parse(memId);
+        const member = await this.memRepo.getMemberById(memId, orgId);
+        if (!member?.isActive) throw new AppError(StatusCode.NotFound, "Member not found");
+        return member;
+    }
+
+    async deleteMember(memId: string, orgId: string, userId: string): Promise<void> {
+        const caller = await this.authorize(orgId, userId, true);
+        orgIdSchema.parse(memId);
+        const member = await this.memRepo.getMemberById(memId, orgId);
+        if (!member?.isActive) throw new AppError(StatusCode.NotFound, "Member not found");
+        if (member.role === "OWNER" || (member.role === "ADMIN" && caller.role !== "OWNER")) {
+            throw new AppError(StatusCode.Forbidden, "Only the owner can manage administrators; the owner cannot be removed");
         }
         await this.memRepo.deleteMember(memId, orgId);
     }

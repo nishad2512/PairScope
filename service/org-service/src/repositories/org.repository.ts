@@ -1,12 +1,13 @@
-import { eq } from "drizzle-orm";
+import { members } from "@/models/membership.model";
+import { and, eq, inArray, or } from "drizzle-orm";
 import { db } from "../config/db";
 import { IOrg, IOrgRepository } from "../interfaces/org.interface";
 import { orgs } from "../models/organization.model";
-import { injectable } from "tsyringe";
-import { Transaction } from "@/types/database.types";
+import { DatabaseExecutor, Transaction } from "@/types/database.types";
 
-@injectable()
 export class OrgRepository implements IOrgRepository {
+    constructor(private readonly database: DatabaseExecutor = db) {}
+
     async create(
         org: typeof orgs.$inferInsert,
         tx: Transaction
@@ -21,13 +22,18 @@ export class OrgRepository implements IOrgRepository {
     }
 
     async getOrgById(orgId: string): Promise<IOrg | null> {
-        const [org] = await db.select().from(orgs).where(eq(orgs.id, orgId));
+        const [org] = await this.database.select().from(orgs).where(eq(orgs.id, orgId));
 
         return org || null;
     }
 
+    async getOrgForUpdate(orgId: string): Promise<IOrg | null> {
+        const [org] = await this.database.select().from(orgs).where(eq(orgs.id, orgId)).for("update");
+        return org || null;
+    }
+
     async getOrgBySlug(slug: string): Promise<IOrg | null> {
-        const [org] = await db.select().from(orgs).where(eq(orgs.slug, slug));
+        const [org] = await this.database.select().from(orgs).where(eq(orgs.slug, slug));
 
         return org || null;
     }
@@ -35,6 +41,9 @@ export class OrgRepository implements IOrgRepository {
     async getOrgsByOwner(
         ownerId: string,
     ): Promise<(IOrg)[]> {
-        return await db.select().from(orgs).where(eq(orgs.ownerId, ownerId));
+        return await this.database.select().from(orgs).where(or(eq(orgs.ownerId, ownerId), inArray(orgs.id,
+            this.database.select({ orgId: members.orgId }).from(members)
+                .where(and(eq(members.userId, ownerId), eq(members.isActive, true))),
+        )));
     }
 }

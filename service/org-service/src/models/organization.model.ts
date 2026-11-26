@@ -4,7 +4,6 @@ export const orgs = pgTable("organizations", {
     id: uuid().primaryKey().defaultRandom(),
     name: text("name").notNull(),
     slug: text("slug").notNull().unique(),
-    password: text("password").notNull(),
     tier: text("tier").default("free"),
     tierId: uuid(),
     ownerId: uuid().notNull(),

@@ -1,3 +1,4 @@
+import { toMemberResponse } from "@/mappers/member.mapper";
 import {
     IMemberController,
     IMemberService,
@@ -12,19 +13,11 @@ export class MemberController implements IMemberController {
         @inject("IMemberService") private readonly serv: IMemberService,
     ) {}
 
-    async create(req: Request, res: Response): Promise<void> {
-        const userId = req.user?.userId;
-        const orgId = req.params.orgId as string;
-        const result = await this.serv.create(req.body, orgId, userId);
-
-        res.status(StatusCode.Created).json({ data: result });
-    }
-
     async getOrgMembers(req: Request, res: Response): Promise<void> {
         const orgId = req.params.orgId as string;
-        const result = await this.serv.getMembersByOrg(orgId);
+        const result = await this.serv.getMembersByOrg(orgId, req.user!.userId);
 
-        res.status(StatusCode.Ok).json({ data: result });
+        res.status(StatusCode.Ok).json({ data: result.map(toMemberResponse) });
     }
 
     async getMemberById(req: Request, res: Response): Promise<void> {
@@ -32,14 +25,15 @@ export class MemberController implements IMemberController {
         const result = await this.serv.getMemberById(
             memId as string,
             orgId as string,
+            req.user!.userId,
         );
 
-        res.status(StatusCode.Ok).json({ data: result });
+        res.status(StatusCode.Ok).json({ data: toMemberResponse(result) });
     }
 
     async deleteMember(req: Request, res: Response): Promise<void> {
         const { orgId, memId } = req.params;
-        await this.serv.deleteMember(memId as string, orgId as string);
+        await this.serv.deleteMember(memId as string, orgId as string, req.user!.userId);
 
         res.status(StatusCode.Ok).json({ success: true });
     }

@@ -1,4 +1,4 @@
-import { pgTable, pgEnum, uuid, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, pgEnum, uuid, boolean, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const roleEnum = pgEnum("member_role", [
     "OWNER",
@@ -16,4 +16,4 @@ export const members = pgTable("organization_membership", {
     updatedAt: timestamp("updated_at")
         .$onUpdate(() => new Date())
         .notNull(),
-});
+}, (table) => [uniqueIndex("organization_membership_org_user_unique").on(table.orgId, table.userId)]);

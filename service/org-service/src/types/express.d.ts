@@ -1,4 +1,4 @@
-import { AccessPayload } from "../interfaces/refresh.interface";
+interface AccessPayload { userId: string; sessionId?: string; }
 
 declare global {
     namespace Express {

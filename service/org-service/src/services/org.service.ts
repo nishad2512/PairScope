@@ -60,7 +60,7 @@ export class OrgService implements IOrgService {
         return await this.orgRepo.getOrgsByOwner(ownerId);
     }
 
-    async getOrgById(orgId: string): Promise<IOrg> {
+    async getOrgById(orgId: string, userId: string): Promise<IOrg> {
         const isValidUuid = uuidRegex.test(orgId);
 
         if (!isValidUuid) {
@@ -79,10 +79,14 @@ export class OrgService implements IOrgService {
             );
         }
 
+        const membership = await this.membRepo.getMemberByUser(userId, org.id);
+        if (!org.isActive || !membership?.isActive) {
+            throw new AppError(StatusCode.Forbidden, "Organization membership is required");
+        }
         return org;
     }
 
-    async getOrgBySlug(slug: string): Promise<IOrg> {
+    async getOrgBySlug(slug: string, userId: string): Promise<IOrg> {
         const org = await this.orgRepo.getOrgBySlug(slug);
 
         if (!org) {
@@ -92,6 +96,10 @@ export class OrgService implements IOrgService {
             );
         }
 
+        const membership = await this.membRepo.getMemberByUser(userId, org.id);
+        if (!org.isActive || !membership?.isActive) {
+            throw new AppError(StatusCode.Forbidden, "Organization membership is required");
+        }
         return org;
     }
 }

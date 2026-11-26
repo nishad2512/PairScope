@@ -9,6 +9,7 @@ export type IOrg = typeof orgs.$inferSelect;
 export interface IOrgRepository {
     create(org: typeof orgs.$inferInsert, tx: Transaction): Promise<IOrg>;
     getOrgById(orgId: string): Promise<IOrg | null>;
+    getOrgForUpdate(orgId: string): Promise<IOrg | null>;
     getOrgBySlug(slug: string): Promise<IOrg | null>;
     getOrgsByOwner(ownerId: string): Promise<IOrg[]>;
 }
@@ -19,8 +20,8 @@ export interface IOrgService {
         ownerId: string,
     ): Promise<{ org: IOrg; member: IOrgMember }>;
     getOrgs(ownerId: string): Promise<IOrg[]>;
-    getOrgById(orgId: string): Promise<IOrg>;
-    getOrgBySlug(slug: string): Promise<IOrg>;
+    getOrgById(orgId: string, userId: string): Promise<IOrg>;
+    getOrgBySlug(slug: string, userId: string): Promise<IOrg>;
 }
 
 export interface IOrgController {

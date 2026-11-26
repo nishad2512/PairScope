@@ -4,14 +4,14 @@ import {
     IOrgMember,
 } from "@/interfaces/membership.interface";
 import { members } from "@/models/membership.model";
-import { Transaction } from "@/types/database.types";
+import { DatabaseExecutor, Transaction } from "@/types/database.types";
 import AppError from "@/utils/AppError";
 import { StatusCode } from "@/utils/StatusEnum";
 import { and, eq } from "drizzle-orm";
-import { injectable } from "tsyringe";
 
-@injectable()
 export class MemberRepository implements IMemberRepository {
+    constructor(private readonly database: DatabaseExecutor = db) {}
+
     async createTx(
         member: typeof members.$inferInsert,
         tx: Transaction,
@@ -29,7 +29,7 @@ export class MemberRepository implements IMemberRepository {
     }
 
     async create(member: typeof members.$inferInsert): Promise<IOrgMember> {
-        const [newMember] = await db.insert(members).values(member).returning();
+        const [newMember] = await this.database.insert(members).values(member).returning();
 
         if (!newMember) {
             throw new AppError(
@@ -42,10 +42,10 @@ export class MemberRepository implements IMemberRepository {
     }
 
     async getMembersByOrg(orgId: string): Promise<IOrgMember[]> {
-        const orgMembers = await db
+        const orgMembers = await this.database
             .select()
             .from(members)
-            .where(eq(members.orgId, orgId));
+            .where(and(eq(members.orgId, orgId), eq(members.isActive, true)));
 
         return orgMembers;
     }
@@ -54,7 +54,7 @@ export class MemberRepository implements IMemberRepository {
         memId: string,
         orgId: string,
     ): Promise<IOrgMember | null> {
-        const [orgMember] = await db
+        const [orgMember] = await this.database
             .select()
             .from(members)
             .where(and(eq(members.orgId, orgId), eq(members.id, memId)));
@@ -66,7 +66,7 @@ export class MemberRepository implements IMemberRepository {
         userId: string,
         orgId: string,
     ): Promise<IOrgMember | null> {
-        const [orgMember] = await db
+        const [orgMember] = await this.database
             .select()
             .from(members)
             .where(and(eq(members.orgId, orgId), eq(members.userId, userId)));
@@ -74,8 +74,15 @@ export class MemberRepository implements IMemberRepository {
         return orgMember || null;
     }
 
+    async reactivate(id: string, role: IOrgMember["role"]): Promise<IOrgMember> {
+        const [member] = await this.database.update(members).set({ isActive: true, role })
+            .where(eq(members.id, id)).returning();
+        if (!member) throw new AppError(StatusCode.NotFound, "Membership not found");
+        return member;
+    }
+
     async deleteMember(memId: string, orgId: string): Promise<void> {
-        await db
+        await this.database
             .update(members)
             .set({ isActive: false })
             .where(and(eq(members.orgId, orgId), eq(members.id, memId)));
