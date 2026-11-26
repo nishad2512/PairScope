@@ -19,33 +19,47 @@ export class EmailConsumer {
 
     async start(): Promise<void> {
         await this.channel.prefetch(1);
-        const consumer = await this.channel.consume(queues.email, (message) => {
-            if (!message) return this.closeConnection();
-            this.pending = this.handle(message).catch(() => {
-                console.error("Could not transfer email. Reconnecting before redelivery.");
-                this.closeConnection();
-            });
-        }, { noAck: false });
+        const consumer = await this.channel.consume(
+            queues.email,
+            (message) => {
+                if (!message) return this.closeConnection();
+                this.pending = this.handle(message).catch(() => {
+                    console.error(
+                        "Could not transfer email. Reconnecting before redelivery.",
+                    );
+                    this.closeConnection();
+                });
+            },
+            { noAck: false },
+        );
         this.consumerTag = consumer.consumerTag;
     }
 
     private async handle(message: ConsumeMessage): Promise<void> {
-        const header: unknown = message.properties.headers?.["x-retry-attempt"] ?? 0;
-        const validAttempt = typeof header === "number" && Number.isInteger(header)
-            && header >= 0 && header <= this.retryDelays.length;
+        const header: unknown =
+            message.properties.headers?.["x-retry-attempt"] ?? 0;
+        const validAttempt =
+            typeof header === "number" &&
+            Number.isInteger(header) &&
+            header >= 0 &&
+            header <= this.retryDelays.length;
         const attempt = validAttempt ? header : this.retryDelays.length;
 
         try {
             if (!validAttempt) throw new EmailError("INVALID_RETRY_ATTEMPT");
             const event = parseEmailEvent(message.content);
-            if (message.fields.exchange === exchanges.events && message.fields.routingKey !== event.type) {
+            if (
+                message.fields.exchange === exchanges.events &&
+                message.fields.routingKey !== event.type
+            ) {
                 throw new EmailError("EVENT_TYPE_MISMATCH");
             }
             const status = await this.email.deliver(event);
             this.channel.ack(message);
             console.info(`Email ${event.eventId}: ${status}`);
         } catch (error) {
-            const failure = error instanceof EmailError ? error.code : "EMAIL_UNAVAILABLE";
+            const failure =
+                error instanceof EmailError ? error.code : "EMAIL_UNAVAILABLE";
             const retryable = !(error instanceof EmailError) || error.retryable;
             const retry = retryable && attempt < this.retryDelays.length;
 
@@ -59,12 +73,15 @@ export class EmailConsumer {
                 failure,
             );
             this.channel.ack(message);
-            console.error(`Email ${retry ? "queued for retry" : "moved to DLQ"}: ${failure}`);
+            console.error(
+                `Email ${retry ? "queued for retry" : "moved to DLQ"}: ${failure}`,
+            );
         }
     }
 
     async stop(): Promise<void> {
-        if (this.consumerTag) await this.channel.cancel(this.consumerTag).catch(() => {});
+        if (this.consumerTag)
+            await this.channel.cancel(this.consumerTag).catch(() => {});
         await this.pending;
     }
 }

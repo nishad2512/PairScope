@@ -59,6 +59,8 @@ services:
       DATABASE_URL: postgresql://pairscope:PairScope@postgres/session
       GRPC_AUTH_URL: "auth-service:50051"
       INTERNAL_SERVICE_SECRET: pairScopeInternalSecret
+      RABBITMQ_URL: amqp://notification:local-notification-password@rabbitmq:5672
+      FRONTEND_URL: http://localhost:5173
     ports:
       - "3002:3002"
     depends_on:
@@ -110,6 +112,49 @@ services:
       session-service:
         condition: service_started
 
+  rabbitmq:
+    image: rabbitmq:4.2-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: notification
+      RABBITMQ_DEFAULT_PASS: local-notification-password
+    ports:
+      - "127.0.0.1:${NOTIFICATION_AMQP_PORT:-5673}:5672"
+      - "127.0.0.1:${NOTIFICATION_RABBIT_UI_PORT:-15673}:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports:
+      - "127.0.0.1:${NOTIFICATION_SMTP_PORT:-1026}:1025"
+      - "127.0.0.1:${NOTIFICATION_MAIL_UI_PORT:-8026}:8025"
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: service/notification-service/Dockerfile
+    environment:
+      RABBITMQ_URL: amqp://notification:local-notification-password@rabbitmq:5672
+      FRONTEND_URL: http://localhost:5173
+      EMAIL_FROM: nishadmp2512@gmail.com
+      SMTP_HOST: localhost
+      SMTP_PORT: 3000
+      SMTP_USER: nishadmp2512@gmail.com
+      SMTP_PASSWORD: ulvo ttnm qzzo xqck
+      SMTP_REQUIRE_TLS: "false"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    stop_grace_period: 40s
+
 volumes:
   postgres_data:
   redis_data:
+  rabbitmq_data:

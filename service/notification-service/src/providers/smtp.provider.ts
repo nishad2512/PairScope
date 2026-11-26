@@ -21,7 +21,9 @@ export class SmtpProvider implements EmailProvider {
             port: options.port,
             secure: options.secure,
             requireTLS: options.requireTLS,
-            auth: options.user ? { user: options.user, pass: options.password } : undefined,
+            auth: options.user
+                ? { user: options.user, pass: options.password }
+                : undefined,
             connectionTimeout: 10000,
             greetingTimeout: 10000,
             socketTimeout: 30000,
@@ -32,7 +34,10 @@ export class SmtpProvider implements EmailProvider {
 
     async send(email: Email): Promise<void> {
         try {
-            const result = await this.transport.sendMail({ ...email, from: this.options.from });
+            const result = await this.transport.sendMail({
+                ...email,
+                from: this.options.from,
+            });
             if (!result.accepted?.length) {
                 throw new EmailError("RECIPIENT_REJECTED");
             }

@@ -19,11 +19,19 @@ export const emailEvents = [
 ] as const;
 
 export const retryKey = (index: number) => `email.retry.${index + 1}`;
-export const retryQueue = (delay: number) => `notification.email.retry.${delay}ms`;
+export const retryQueue = (delay: number) =>
+    `notification.email.retry.${delay}ms`;
 
-export async function declareTopology(channel: Channel, delays: number[]): Promise<void> {
+export async function declareTopology(
+    channel: Channel,
+    delays: number[],
+): Promise<void> {
     await channel.assertExchange(exchanges.events, "topic", { durable: true });
-    for (const exchange of [exchanges.delivery, exchanges.retry, exchanges.dead]) {
+    for (const exchange of [
+        exchanges.delivery,
+        exchanges.retry,
+        exchanges.dead,
+    ]) {
         await channel.assertExchange(exchange, "direct", { durable: true });
     }
 
@@ -35,7 +43,11 @@ export async function declareTopology(channel: Channel, delays: number[]): Promi
     };
     await channel.assertQueue(queues.dead, {
         durable: true,
-        arguments: { "x-queue-type": "quorum", "x-overflow": "reject-publish", "x-max-length-bytes": 64 * 1024 * 1024 },
+        arguments: {
+            "x-queue-type": "quorum",
+            "x-overflow": "reject-publish",
+            "x-max-length-bytes": 64 * 1024 * 1024,
+        },
     });
     await channel.bindQueue(queues.dead, exchanges.dead, "email");
     await channel.assertQueue(queues.email, {

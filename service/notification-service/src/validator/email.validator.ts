@@ -17,19 +17,32 @@ export const emailEventSchema = z.discriminatedUnion("type", [
     z.object({
         ...envelope,
         type: z.literal("session.invitation.created.v1"),
-        data: z.object({ ...invitation, sessionId: z.uuid(), sessionTitle: z.string().min(1).max(200) }),
+        data: z.object({
+            ...invitation,
+            sessionId: z.uuid(),
+            sessionTitle: z.string().min(1).max(200),
+        }),
     }),
     z.object({
         ...envelope,
         type: z.literal("organization.invitation.created.v1"),
-        data: z.object({ ...invitation, organizationId: z.uuid(), organizationName: z.string().min(1).max(200) }),
+        data: z.object({
+            ...invitation,
+            organizationId: z.uuid(),
+            organizationName: z.string().min(1).max(200),
+        }),
     }),
     z.object({
         ...envelope,
         type: z.literal("email.requested.v1"),
         data: z.object({
             recipientEmail: z.email(),
-            subject: z.string().trim().min(1).max(200).refine((value) => !/[\r\n]/.test(value)),
+            subject: z
+                .string()
+                .trim()
+                .min(1)
+                .max(200)
+                .refine((value) => !/[\r\n]/.test(value)),
             text: z.string().min(1).max(30000),
             expiresAt: z.iso.datetime(),
         }),
