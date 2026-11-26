@@ -1,3 +1,4 @@
+import { toRealtimeAccessResponse } from "@/mappers/session.mapper";
 import { IInvitationRepository } from "@/interfaces/invitation.interface";
 import { IParticipantRepository } from "@/interfaces/participant.interface";
 import { ISessionRepository, ISessionService } from "@/interfaces/session.interface";
@@ -89,18 +90,7 @@ export class SessionService implements ISessionService {
 
         this.checkSession(session);
 
-        return {
-            sessionId: session.id,
-            language: session.language,
-            status: session.status.toLowerCase(),
-            expiresAt: session.expiresAt?.toISOString() ?? null,
-            participant: {
-                id: participant.id,
-                userId: participant.userId,
-                displayName: participant.displayName,
-                role: participant.role,
-            },
-        };
+        return toRealtimeAccessResponse(session, participant);
     }
 
     async createInvitation(

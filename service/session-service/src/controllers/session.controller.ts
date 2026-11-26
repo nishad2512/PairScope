@@ -1,3 +1,5 @@
+import { toCreatedSessionResponse, toSessionResponse } from "@/mappers/session.mapper";
+import { toInvitationResponse, toJoinedInvitationResponse } from "@/mappers/invitation.mapper";
 import { Request, Response } from "express";
 import { ISessionService } from "@/interfaces/session.interface";
 import { inject, injectable } from "tsyringe";
@@ -16,20 +18,7 @@ export class SessionController {
         );
 
         res.status(StatusCode.Created).json({
-            data: {
-                id: session.id,
-                title: session.title,
-                language: session.language,
-                status: session.status.toLowerCase(),
-                ownerId: session.creatorId,
-                createdAt: session.createdAt,
-                scheduledAt: session.scheduledAt ?? null,
-                startedAt: session.startedAt ?? null,
-                expiresAt: session.expiresAt ?? null,
-                participantId: participant.id,
-                participantDisplayName: participant.displayName,
-                participantRole: participant.role.toLowerCase(),
-            },
+            data: toCreatedSessionResponse(session, participant),
         });
     };
 
@@ -40,23 +29,7 @@ export class SessionController {
         const sessions = await this.service.getForUser(req.user!.userId);
 
         res.status(StatusCode.Ok).json({
-            data: sessions.map((session) => ({
-                id: session.id,
-                title: session.title,
-                description: session.description,
-                language: session.language,
-                sessionType: session.sessionType.toLowerCase(),
-                status: session.status.toLowerCase(),
-                ownerId: session.creatorId,
-                orgId: session.orgId,
-                questionId: session.questionId,
-                scheduledAt: session.scheduledAt ?? null,
-                startedAt: session.startedAt ?? null,
-                endedAt: session.endedAt ?? null,
-                expiresAt: session.expiresAt ?? null,
-                createdAt: session.createdAt,
-                updatedAt: session.updatedAt,
-            })),
+            data: sessions.map(toSessionResponse),
         });
     };
 
@@ -82,7 +55,11 @@ export class SessionController {
         );
 
         res.status(StatusCode.Created).json({
-            data: result,
+            data: {
+                invitation: toInvitationResponse(result.invitation),
+                token: result.token,
+                emailStatus: result.emailStatus,
+            },
         });
     };
 
@@ -94,6 +71,6 @@ export class SessionController {
             req.user?.sessionId ? null : req.user?.userId || null,
         );
 
-        res.status(StatusCode.Ok).json({ data: result });
+        res.status(StatusCode.Ok).json({ data: toJoinedInvitationResponse(result) });
     };
 }
