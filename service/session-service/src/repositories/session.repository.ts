@@ -2,14 +2,16 @@ import { db } from "@/config/db";
 import { ISessionRepository } from "@/interfaces/session.interface";
 import { ISession, sessions } from "@/models/session.model";
 import { participants } from "@/models/participant.model";
-import { Transaction } from "@/types/database.types";
+import { DatabaseExecutor } from "@/types/database.types";
 import AppError from "@/utils/AppError";
 import { StatusCode } from "@/utils/StatusEnum";
 import { desc, eq, inArray, or } from "drizzle-orm";
 
 export class SessionRepository implements ISessionRepository {
+    constructor(private readonly database: DatabaseExecutor = db) {}
+
     async getSessionById(sessionId: string): Promise<ISession | null> {
-        const [session] = await db
+        const [session] = await this.database
             .select()
             .from(sessions)
             .where(eq(sessions.id, sessionId));
@@ -17,10 +19,9 @@ export class SessionRepository implements ISessionRepository {
     }
 
     async getSessionForUpdate(
-        tx: Transaction,
         sessionId: string,
     ): Promise<ISession | null> {
-        const [session] = await tx
+        const [session] = await this.database
             .select()
             .from(sessions)
             .where(eq(sessions.id, sessionId))
@@ -29,10 +30,9 @@ export class SessionRepository implements ISessionRepository {
     }
 
     async createSession(
-        tx: Transaction,
-        session: typeof sessions.$inferInsert,
+        session: ISession,
     ): Promise<ISession> {
-        const [newSession] = await tx
+        const [newSession] = await this.database
             .insert(sessions)
             .values(session)
             .returning();
@@ -47,7 +47,7 @@ export class SessionRepository implements ISessionRepository {
     }
 
     async getSessionsForUser(userId: string): Promise<ISession[]> {
-        return db
+        return this.database
             .select()
             .from(sessions)
             .where(
@@ -55,7 +55,7 @@ export class SessionRepository implements ISessionRepository {
                     eq(sessions.creatorId, userId),
                     inArray(
                         sessions.id,
-                        db
+                        this.database
                             .select({ sessionId: participants.sessionId })
                             .from(participants)
                             .where(eq(participants.userId, userId)),

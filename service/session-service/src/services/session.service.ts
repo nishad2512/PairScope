@@ -1,7 +1,8 @@
-import { db } from "@/config/db";
-import { InvitationRepository } from "@/repositories/invitation.repository";
-import { ParticipantRepository } from "@/repositories/participant.repository";
-import { SessionRepository } from "@/repositories/session.repository";
+import { IInvitationRepository } from "@/interfaces/invitation.interface";
+import { IParticipantRepository } from "@/interfaces/participant.interface";
+import { ISessionRepository, ISessionService } from "@/interfaces/session.interface";
+import { ISessionTransaction } from "@/interfaces/transaction.interface";
+import { IAuthService } from "@/interfaces/auth.interface";
 import AppError from "@/utils/AppError";
 import { StatusCode } from "@/utils/StatusEnum";
 import { CreateInviteDTO, JoinInviteDTO } from "@/validators/invite.validator";
@@ -13,21 +14,22 @@ import {
 } from "@/validators/session.validator";
 import { createHash, randomBytes } from "node:crypto";
 import { inject, injectable } from "tsyringe";
-import { getUserData, setGuestUser } from "./grpc.service";
 
 function hashToken(token: string) {
     return createHash("sha256").update(token).digest("hex");
 }
 
 @injectable()
-export class SessionService {
+export class SessionService implements ISessionService {
     constructor(
-        @inject("ISessionRepository") private readonly repo: SessionRepository,
-        @inject("ParticipantRepository")
-        private readonly participantRepo: ParticipantRepository,
-        @inject("InvitationRepository")
-        private readonly inviteRepo: InvitationRepository,
+        @inject("ISessionRepository") private readonly repo: ISessionRepository,
+        @inject("IParticipantRepository")
+        private readonly participantRepo: IParticipantRepository,
+        @inject("IInvitationRepository")
+        private readonly inviteRepo: IInvitationRepository,
         @inject("IEmailPublisher") private readonly emailPublisher: IEmailPublisher,
+        @inject("IAuthService") private readonly auth: IAuthService,
+        @inject("ISessionTransaction") private readonly transaction: ISessionTransaction,
     ) {}
 
     async create(dto: CreateSessionDTO, userId: string) {
@@ -35,8 +37,8 @@ export class SessionService {
         const status = scheduledAt ? "SCHEDULED" : "LIVE";
         const startedAt = status === "LIVE" ? new Date() : null;
 
-        return await db.transaction(async (tx) => {
-            const session = await this.repo.createSession(tx, {
+        return await this.transaction.run(async (repositories) => {
+            const session = await repositories.sessions.createSession({
                 title: dto.title,
                 description: dto.description ?? null,
                 creatorId: userId,
@@ -50,8 +52,7 @@ export class SessionService {
                 expiresAt: dto.expiresAt ?? null,
             });
 
-            const participant = await this.participantRepo.createParticipant(
-                tx,
+            const participant = await repositories.participants.createParticipant(
                 {
                     sessionId: session.id!,
                     userId,
@@ -125,7 +126,7 @@ export class SessionService {
 
         this.checkSession(session);
 
-        const user = dto.email ? await getUserData(dto.email) : null;
+        const user = dto.email ? await this.auth.getUserData(dto.email) : null;
         if (dto.email && !user) {
             throw new AppError(
                 StatusCode.BadRequest,
@@ -179,9 +180,8 @@ export class SessionService {
             );
         }
 
-        return await db.transaction(async (tx) => {
-            const invite = await this.inviteRepo.findInviteByToken(
-                tx,
+        return await this.transaction.run(async (repositories) => {
+            const invite = await repositories.invitations.findInviteByToken(
                 hashToken(token),
             );
             if (
@@ -202,8 +202,7 @@ export class SessionService {
                 );
             }
 
-            const session = await this.repo.getSessionForUpdate(
-                tx,
+            const session = await repositories.sessions.getSessionForUpdate(
                 invite.sessionId,
             );
             if (!session) {
@@ -214,10 +213,9 @@ export class SessionService {
 
             // Lock the session while checking membership so parallel joins cannot create duplicates.
             const existing = userId
-                ? await this.participantRepo.getUserParticipant(
+                ? await repositories.participants.getUserParticipant(
                       invite.sessionId,
                       userId,
-                      tx,
                   )
                 : null;
 
@@ -233,7 +231,7 @@ export class SessionService {
 
             const participant =
                 existing ??
-                (await this.participantRepo.createParticipant(tx, {
+                (await repositories.participants.createParticipant({
                     displayName: dto.name,
                     role: invite.role,
                     sessionId: invite.sessionId,
@@ -244,12 +242,12 @@ export class SessionService {
 
             const data = userId
                 ? null
-                : await setGuestUser(
+                : await this.auth.setGuestUser(
                       participant.id!,
                       invite.sessionId,
                       participant.role,
                   );
-            await this.inviteRepo.acceptInvite(tx, invite.id, userId);
+            await repositories.invitations.acceptInvite(invite.id, userId);
 
             return data ? { result: participant, data } : participant;
         });

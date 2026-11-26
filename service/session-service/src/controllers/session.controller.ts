@@ -1,12 +1,12 @@
 import { Request, Response } from "express";
-import { SessionService } from "@/services/session.service";
+import { ISessionService } from "@/interfaces/session.interface";
 import { inject, injectable } from "tsyringe";
 import { StatusCode } from "@/utils/StatusEnum";
 
 @injectable()
 export class SessionController {
     constructor(
-        @inject("SessionService") private readonly service: SessionService,
+        @inject("ISessionService") private readonly service: ISessionService,
     ) {}
 
     public create = async (req: Request, res: Response): Promise<void> => {

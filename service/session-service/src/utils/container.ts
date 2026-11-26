@@ -1,5 +1,7 @@
+import { AuthService } from "@/services/grpc.service";
+import { SessionTransaction } from "@/repositories/session-transaction";
 import { SessionController } from "@/controllers/session.controller";
-import { ISessionRepository } from "@/interfaces/session.interface";
+import { ISessionRepository, ISessionService } from "@/interfaces/session.interface";
 import { SessionRepository } from "@/repositories/session.repository";
 import { ParticipantRepository } from "@/repositories/participant.repository";
 import { SessionService } from "@/services/session.service";
@@ -8,12 +10,11 @@ import { InvitationRepository } from "@/repositories/invitation.repository";
 import { IEmailPublisher } from "@/interfaces/email.interface";
 import { EmailPublisher } from "@/messaging/email.publisher";
 
-container.registerSingleton("ParticipantRepository", ParticipantRepository);
-container.registerSingleton("InvitationRepository", InvitationRepository);
-container.registerSingleton<ISessionRepository>(
-    "ISessionRepository",
-    SessionRepository,
-);
+container.register("IParticipantRepository", { useFactory: () => new ParticipantRepository() });
+container.register("IInvitationRepository", { useFactory: () => new InvitationRepository() });
+container.register<ISessionRepository>("ISessionRepository", { useFactory: () => new SessionRepository() });
 container.registerSingleton<IEmailPublisher>("IEmailPublisher", EmailPublisher);
-container.registerSingleton("SessionService", SessionService);
+container.register("IAuthService", { useFactory: () => new AuthService() });
+container.register("ISessionTransaction", { useFactory: () => new SessionTransaction() });
+container.registerSingleton<ISessionService>("ISessionService", SessionService);
 container.registerSingleton("SessionController", SessionController);

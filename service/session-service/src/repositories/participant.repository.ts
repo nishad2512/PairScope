@@ -1,19 +1,19 @@
+import { IParticipantRepository } from "@/interfaces/participant.interface";
 import { ISessionParticipant, participants } from "@/models/participant.model";
-import { Transaction } from "@/types/database.types";
+import { DatabaseExecutor } from "@/types/database.types";
 import AppError from "@/utils/AppError";
 import { StatusCode } from "@/utils/StatusEnum";
 import { db } from "@/config/db";
 import { and, eq, isNull } from "drizzle-orm";
-import { injectable } from "tsyringe";
 
-@injectable()
-export class ParticipantRepository {
+export class ParticipantRepository implements IParticipantRepository {
+    constructor(private readonly database: DatabaseExecutor = db) {}
+
     async getUserParticipant(
         sessionId: string,
         userId: string,
-        tx?: Transaction,
     ): Promise<ISessionParticipant | null> {
-        const [participant] = await (tx ?? db)
+        const [participant] = await this.database
             .select()
             .from(participants)
             .where(
@@ -30,7 +30,7 @@ export class ParticipantRepository {
         sessionId: string,
         participantId: string,
     ): Promise<ISessionParticipant | null> {
-        const [participant] = await db
+        const [participant] = await this.database
             .select()
             .from(participants)
             .where(
@@ -45,10 +45,9 @@ export class ParticipantRepository {
     }
 
     async createParticipant(
-        tx: Transaction,
-        participant: typeof participants.$inferInsert,
+        participant: ISessionParticipant,
     ): Promise<ISessionParticipant> {
-        const [newParticipant] = await tx
+        const [newParticipant] = await this.database
             .insert(participants)
             .values(participant)
             .returning();
