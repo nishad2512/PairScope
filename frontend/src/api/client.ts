@@ -1,12 +1,18 @@
-import axios, {
-    AxiosError,
-    type InternalAxiosRequestConfig,
-} from 'axios';
-import { API_ROUTES } from '../constants/api.routes';
-import { useAuthStore } from '../store/auth.store';
+import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
+import { API_ROUTES } from "../constants/api.routes";
+import { useAuthStore } from "../store/auth.store";
+
+export class ApiError extends Error {
+    readonly status?: number;
+
+    constructor(message: string, status?: number) {
+        super(message);
+        this.status = status;
+    }
+}
 
 export const apiClient = axios.create({
-    baseURL: '/api',
+    baseURL: "/api",
     withCredentials: true,
     timeout: 10_000,
 });
@@ -45,14 +51,16 @@ apiClient.interceptors.response.use(
 
     async (error: AxiosError) => {
         const original = error.config as
-            | (InternalAxiosRequestConfig & { _retry?: boolean })
-            | undefined;
+            (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
 
         const isAuthRoute = Object.values(API_ROUTES.AUTH).some(
             (route) => original?.url === route,
         );
-        const canRetry = original && !original._retry && !isAuthRoute
-            && !!useAuthStore.getState().accessToken;
+        const canRetry =
+            original &&
+            !original._retry &&
+            !isAuthRoute &&
+            !!useAuthStore.getState().accessToken;
 
         if (error.response?.status === 401 && canRetry) {
             original._retry = true;
@@ -62,11 +70,16 @@ apiClient.interceptors.response.use(
                 return apiClient(original);
             } catch {
                 useAuthStore.getState().clearAuth();
-                window.location.assign('/login');
+                window.location.assign(
+                    `/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`,
+                );
             }
         }
 
         const body = error.response?.data as { message?: string } | undefined;
-        throw new Error(body?.message ?? error.message ?? 'Request failed');
+        throw new ApiError(
+            body?.message ?? error.message ?? "Request failed",
+            error.response?.status,
+        );
     },
 );

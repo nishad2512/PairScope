@@ -51,9 +51,8 @@ export default function CreateSessionDialog({
     <Modal
       title="Start something great."
       description="Bring the right people and a fresh perspective."
-      onClose={() => {
-        if (!busy) onClose();
-      }}
+      busy={busy}
+      onClose={onClose}
     >
       <form className="form-stack" onSubmit={submit}>
         {error && <Notice>{error}</Notice>}

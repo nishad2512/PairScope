@@ -33,6 +33,7 @@ export default function Creation({ onClose }: { onClose: () => void }) {
         <Modal
             title="A home for your team."
             description="Keep your people and shared work in one place."
+            busy={busy}
             onClose={onClose}
         >
             <form className="form-stack" onSubmit={submit}>

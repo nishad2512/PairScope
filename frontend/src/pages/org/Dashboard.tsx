@@ -1,9 +1,7 @@
 import { useCallback, useState } from "react";
-import type { FormEvent } from "react";
 import { Link, useParams } from "react-router";
 import { Building2, Plus, Users, Trash2 } from "lucide-react";
 import {
-    inviteMember,
     getMembers,
     getMyOrgs,
     getOrgById,
@@ -16,15 +14,14 @@ import {
     Badge,
     Button,
     EmptyState,
-    Field,
     Loading,
     Modal,
     Notice,
-    Select,
 } from "../../components/ui/primitives";
 import Creation from "./Creation";
+import InviteMemberDialog from "../../components/InviteMemberDialog";
 import { errorMessage, readable } from "../../lib/format";
-import type { MemberRole, OrgMember } from "../../types/api.types";
+import type { OrgMember } from "../../types/api.types";
 
 export default function Organizations() {
     const [creating, setCreating] = useState(false);
@@ -117,31 +114,9 @@ export function OrganizationDetails() {
     }, [orgId]);
     const { data, loading, error, reload } = useResource(load);
     const [adding, setAdding] = useState(false);
-    const [invitation, setInvitation] = useState<{
-        token: string;
-        emailStatus: "queued" | "failed";
-    } | null>(null);
     const [removing, setRemoving] = useState<OrgMember | null>(null);
     const [busy, setBusy] = useState(false);
     const [actionError, setActionError] = useState("");
-    async function add(event: FormEvent<HTMLFormElement>) {
-        event.preventDefault();
-        if (!data?.org.id) return;
-        const form = new FormData(event.currentTarget);
-        setBusy(true);
-        setActionError("");
-        try {
-            const invitation = await inviteMember(data.org.id, {
-                email: String(form.get("email")).trim(),
-                role: String(form.get("role")) as MemberRole,
-            });
-            setInvitation(invitation);
-        } catch (error) {
-            setActionError(errorMessage(error));
-        } finally {
-            setBusy(false);
-        }
-    }
     async function remove() {
         if (!data?.org.id || !removing?.id) return;
         setBusy(true);
@@ -179,18 +154,30 @@ export function OrganizationDetails() {
                     </h1>
                     <p>Different strengths. One shared workspace.</p>
                 </div>
-                <Button
-                    onClick={() => {
-                        setActionError("");
-                        setInvitation(null);
-                        setAdding(true);
-                    }}
-                    disabled={!data.org.id || !canManage}
-                >
-                    <Plus size={18} />
-                    Invite member
-                </Button>
+                {canManage && (
+                    <Button
+                        onClick={() => {
+                            setActionError("");
+                            setAdding(true);
+                        }}
+                        disabled={!data.org.id}
+                        title={
+                            !canManage
+                                ? "Only owners and admins can invite members"
+                                : undefined
+                        }
+                    >
+                        <Plus size={18} />
+                        Invite member
+                    </Button>
+                )}
             </div>
+            {!canManage && (
+                <p className="organization-access-note">
+                    You’re viewing your team as an interviewer. An owner or
+                    admin can invite teammates.
+                </p>
+            )}
             <section className="panel">
                 <div className="section-heading">
                     <div>
@@ -241,71 +228,26 @@ export function OrganizationDetails() {
                     </EmptyState>
                 )}
             </section>
-            {adding && (
-                <Modal
-                    title="Bring someone in."
-                    description="Invite a registered PairScope user by email. They join after accepting."
+            {adding && data.org.id && (
+                <InviteMemberDialog
+                    orgId={data.org.id}
+                    name={data.org.name}
+                    canInviteAdmin={data.role === "OWNER"}
                     onClose={() => setAdding(false)}
-                >
-                    {invitation ? (
-                        <div className="form-stack">
-                            <p>
-                                {invitation.emailStatus === "queued"
-                                    ? "Invitation email queued. They can join using the link below."
-                                    : "The email could not be queued. Share this link with the invited person."}
-                            </p>
-                            <Field
-                                label="Invitation link"
-                                readOnly
-                                value={`${window.location.origin}/organizations/join/${invitation.token}`}
-                                onFocus={(event) =>
-                                    event.currentTarget.select()
-                                }
-                            />
-                            <Button onClick={() => setAdding(false)}>
-                                Done
-                            </Button>
-                        </div>
-                    ) : (
-                        <form className="form-stack" onSubmit={add}>
-                            {actionError && <Notice>{actionError}</Notice>}
-                            <Field
-                                label="Email address"
-                                name="email"
-                                type="email"
-                                placeholder="teammate@example.com"
-                                required
-                            />
-                            <Select label="Role" name="role">
-                                <option value="INTERVIEWER">Interviewer</option>
-                                {data.role === "OWNER" && (
-                                    <option value="ADMIN">Admin</option>
-                                )}
-                            </Select>
-                            <div className="modal-actions">
-                                <Button
-                                    variant="secondary"
-                                    type="button"
-                                    onClick={() => setAdding(false)}
-                                >
-                                    Cancel
-                                </Button>
-                                <Button busy={busy}>Invite member</Button>
-                            </div>
-                        </form>
-                    )}
-                </Modal>
+                />
             )}
             {removing && (
                 <Modal
                     title="Remove this member?"
-                    description="They will lose access to this organization. You can add them again later."
+                    description="They will lose access to this organization. They will need a new invitation to rejoin."
+                    busy={busy}
                     onClose={() => setRemoving(null)}
                 >
                     {actionError && <Notice>{actionError}</Notice>}
                     <div className="modal-actions">
                         <Button
                             variant="secondary"
+                            disabled={busy}
                             onClick={() => setRemoving(null)}
                         >
                             Keep member

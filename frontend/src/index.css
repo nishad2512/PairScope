@@ -23,6 +23,9 @@
 * {
   box-sizing: border-box;
 }
+html {
+  scrollbar-gutter: stable;
+}
 body {
   margin: 0;
   min-width: 320px;
@@ -390,12 +393,15 @@ small {
   margin-top: 7px;
 }
 .modal {
+  margin: auto;
+  background: var(--card);
+  overscroll-behavior: contain;
   border: 1px solid #e5e5e5;
   border-radius: 16px;
   padding: 0;
   width: 570px;
   max-width: calc(100vw - 32px);
-  max-height: calc(100dvh - 40px);
+  max-height: calc(100dvh - 32px);
   box-shadow: 0 24px 100px #0002;
   overflow: auto;
   color: #292b30;
@@ -428,6 +434,343 @@ small {
   justify-content: flex-end;
   gap: 10px;
   margin-top: 6px;
+}
+.modal[open] {
+  animation: modal-enter 160ms ease-out;
+}
+@keyframes modal-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.modal-actions {
+  flex-wrap: wrap;
+}
+.modal-actions .button {
+  min-height: 42px;
+}
+.modal .eyebrow {
+  display: block;
+  padding-right: 30px;
+}
+.invitation-roles {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+}
+.invitation-roles legend {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.invitation-role {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 15px;
+  cursor: pointer;
+  transition:
+    border-color 150ms,
+    background 150ms;
+}
+.invitation-role:has(input:checked) {
+  background: #fff6f0;
+  border-color: #d48a6d;
+}
+.invitation-role input {
+  accent-color: var(--primary);
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.invitation-role span {
+  display: grid;
+  gap: 4px;
+}
+.invitation-role strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+.invitation-role small {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #737680;
+}
+.invitation-roles:disabled {
+  opacity: 0.65;
+}
+.invitation-roles:disabled .invitation-role {
+  cursor: wait;
+}
+.invitation-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  color: #747680;
+}
+.invitation-note svg {
+  margin-top: 2px;
+  color: #9a765e;
+}
+.invitation-note p {
+  font-size: 12px;
+  line-height: 1.7;
+}
+.invitation-result {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 12px;
+  background: #f0f8f3;
+  border: 1px solid #d8eade;
+}
+.invitation-result-icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: #3b7751;
+}
+.invitation-result h3 {
+  font-size: 15px;
+  margin: 0 0 6px;
+}
+.invitation-result p {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #5d7064;
+}
+.invitation-result.delivery-warning {
+  background: #fff8ed;
+  border-color: #efddbd;
+}
+.delivery-warning .invitation-result-icon {
+  color: #a8782c;
+}
+.delivery-warning p {
+  color: #806a48;
+}
+.copy-link-row {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+.copy-link-row input {
+  flex: 1;
+  width: 0;
+  font-size: 12px;
+  color: #737680;
+}
+.copy-link-row .button {
+  flex-shrink: 0;
+  font-size: 12px;
+  padding-inline: 13px;
+}
+.invitation-expiry {
+  color: #82858d;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.organization-access-note {
+  color: #72757e;
+  font-size: 13px;
+  line-height: 1.6;
+  margin: -8px 0 20px;
+}
+.org-join-page {
+  gap: 0;
+  padding: 32px 24px;
+}
+.org-join-main {
+  flex: 1;
+  width: 100%;
+  display: grid;
+  place-items: center;
+  padding: 44px 0;
+}
+.org-join-card {
+  max-width: 510px;
+  gap: 20px;
+  padding: 36px;
+  position: relative;
+}
+.org-join-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 36px;
+  right: 36px;
+  height: 3px;
+  background: linear-gradient(90deg, #eab296, #ce4c20, #eab296);
+  border-radius: 0 0 3px 3px;
+}
+.invitation-steps {
+  display: flex;
+  justify-content: space-between;
+  list-style: none;
+  padding: 0 0 20px;
+  margin: 0 0 4px;
+  border-bottom: 1px solid #eeece9;
+  gap: 10px;
+}
+.invitation-steps li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #a2a2a5;
+  font-weight: 500;
+}
+.invitation-steps .current {
+  color: #b34d29;
+}
+.invitation-steps .done {
+  color: #538468;
+}
+.org-invitation-icon {
+  height: 58px;
+  width: 58px;
+  border-radius: 17px;
+  display: grid;
+  place-items: center;
+  background: #fff0e7;
+  color: #bb552b;
+}
+.org-invitation-heading {
+  display: grid;
+  gap: 12px;
+}
+.org-invitation-heading .eyebrow {
+  font-size: 10px;
+  margin: 0;
+}
+.org-invitation-heading h1 {
+  font-size: 32px;
+  line-height: 1.18;
+  letter-spacing: -1.1px;
+}
+.org-invitation-heading p {
+  font-size: 14px;
+  line-height: 1.8;
+  color: #737680;
+}
+.invitation-account {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid #e8e8ec;
+  background: #fafafb;
+  border-radius: 10px;
+  min-width: 0;
+}
+.invitation-account-icon {
+  height: 34px;
+  width: 34px;
+  flex-shrink: 0;
+  border: 1px solid #e8e8ec;
+  background: white;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #8b7a6a;
+}
+.invitation-account div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.invitation-account small {
+  color: #85868d;
+  font-size: 11px;
+}
+.invitation-account strong {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+  font-weight: 500;
+}
+.org-join-card .button {
+  width: 100%;
+}
+.org-join-card .button-ghost {
+  margin-top: -12px;
+  font-size: 12px;
+  color: #777983;
+}
+.invitation-signin-hint {
+  font-size: 12px;
+  color: #80828b;
+  line-height: 1.7;
+  text-align: center;
+}
+.org-join-card.joined .org-invitation-icon {
+  color: #3b7751;
+  background: #edf7f1;
+}
+.org-join-card.joined::before {
+  background: linear-gradient(90deg, #cbe6d5, #538468, #cbe6d5);
+}
+.modal-inner .form-stack p {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 480px) {
+  .org-join-page {
+    padding: 24px 16px;
+  }
+  .org-join-main {
+    padding: 30px 0;
+  }
+  .org-join-card {
+    padding: 26px 22px;
+  }
+  .org-invitation-heading h1 {
+    font-size: 28px;
+  }
+  .invitation-result {
+    padding: 14px;
+    gap: 8px;
+  }
+  .invitation-role {
+    padding: 12px;
+    gap: 9px;
+  }
+  .copy-link-row {
+    flex-wrap: wrap;
+  }
+  .copy-link-row input {
+    width: 100%;
+    flex-basis: 100%;
+  }
+  .copy-link-row .button {
+    width: 100%;
+  }
+  .invitation-steps {
+    gap: 6px;
+  }
+  .invitation-steps li {
+    font-size: 10px;
+    gap: 4px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .modal[open] {
+    animation: none;
+  }
+  .invitation-role {
+    transition: none;
+  }
 }
 .type-picker {
   display: grid;

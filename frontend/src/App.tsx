@@ -52,6 +52,10 @@ export default function App() {
                 </Route>
                 <Route path="/join/:token" element={<Join />} />
                 <Route
+                    path="/organizations/join/:token"
+                    element={<JoinOrganization />}
+                />
+                <Route
                     path="/sessions/:sessionId/editor"
                     element={
                         <Suspense
@@ -66,10 +70,6 @@ export default function App() {
                     }
                 />
                 <Route element={<RequireAuth />}>
-                    <Route
-                        path="/organizations/join/:token"
-                        element={<JoinOrganization />}
-                    />
                     <Route element={<AppLayout />}>
                         <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/sessions" element={<Sessions />} />

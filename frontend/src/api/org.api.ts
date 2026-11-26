@@ -49,6 +49,7 @@ export async function getMembers(
 }
 
 export interface OrganizationInvitation {
+    invitation?: { expiresAt: string };
     token: string;
     emailStatus: "queued" | "failed";
 }

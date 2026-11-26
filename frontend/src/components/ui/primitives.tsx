@@ -5,7 +5,7 @@ import type {
     ReactNode,
     SelectHTMLAttributes,
 } from "react";
-import { AlertCircle, LoaderCircle, X } from "lucide-react";
+import { AlertCircle, CircleCheck, LoaderCircle, X } from "lucide-react";
 
 export function Button({
     children,
@@ -44,7 +44,9 @@ export function Field({
                 {...props}
                 id={id}
                 aria-describedby={
-                    hint ? `${id}-hint` : props["aria-describedby"]
+                    [props["aria-describedby"], hint ? `${id}-hint` : ""]
+                        .filter(Boolean)
+                        .join(" ") || undefined
                 }
             />
             {hint && <small id={`${id}-hint`}>{hint}</small>}
@@ -75,7 +77,7 @@ export function Notice({
             className={`notice ${success ? "notice-success" : ""}`}
             role={success ? "status" : "alert"}
         >
-            <AlertCircle size={18} />
+            {success ? <CircleCheck size={18} /> : <AlertCircle size={18} />}
             <span>{children}</span>
         </div>
     );
@@ -113,43 +115,87 @@ export function Modal({
     description,
     children,
     onClose,
+    busy = false,
+    eyebrow = "YOUR WORKSPACE",
 }: {
     title: string;
     description: string;
     children: ReactNode;
     onClose: () => void;
+    busy?: boolean;
+    eyebrow?: string;
 }) {
     const ref = useRef<HTMLDialogElement>(null);
+    const id = useId();
+    const pressedBackdrop = useRef(false);
     useEffect(() => {
         const dialog = ref.current;
+        const previousFocus = document.activeElement;
+        const overflow = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
         dialog?.showModal();
-        return () => dialog?.close();
+        dialog
+            ?.querySelector<HTMLElement>(
+                "input:not([readonly]), select, textarea",
+            )
+            ?.focus();
+        return () => {
+            dialog?.close();
+            document.body.style.overflow = overflow;
+            if (
+                previousFocus instanceof HTMLElement &&
+                previousFocus.isConnected
+            ) {
+                previousFocus.focus({ preventScroll: true });
+            }
+        };
     }, []);
+    const close = () => {
+        if (!busy) onClose();
+    };
     return (
         <dialog
             ref={ref}
             className="modal"
-            aria-labelledby="dialog-title"
-            aria-describedby="dialog-description"
+            aria-labelledby={`${id}-title`}
+            aria-describedby={`${id}-description`}
+            aria-busy={busy || undefined}
             onCancel={(event) => {
                 event.preventDefault();
-                onClose();
+                close();
+            }}
+            onPointerDown={(event) => {
+                const bounds = event.currentTarget.getBoundingClientRect();
+                pressedBackdrop.current =
+                    event.clientX < bounds.left ||
+                    event.clientX > bounds.right ||
+                    event.clientY < bounds.top ||
+                    event.clientY > bounds.bottom;
             }}
             onClick={(event) => {
-                if (event.target === event.currentTarget) onClose();
+                const bounds = event.currentTarget.getBoundingClientRect();
+                const outside =
+                    event.clientX < bounds.left ||
+                    event.clientX > bounds.right ||
+                    event.clientY < bounds.top ||
+                    event.clientY > bounds.bottom;
+                if (pressedBackdrop.current && outside) close();
+                pressedBackdrop.current = false;
             }}
         >
             <div className="modal-inner">
                 <button
                     className="icon-button modal-close"
                     aria-label="Close dialog"
-                    onClick={onClose}
+                    type="button"
+                    disabled={busy}
+                    onClick={close}
                 >
                     <X size={20} />
                 </button>
-                <span className="eyebrow">MAKE ROOM FOR GREAT WORK</span>
-                <h2 id="dialog-title">{title}</h2>
-                <p id="dialog-description" className="muted">
+                <span className="eyebrow">{eyebrow}</span>
+                <h2 id={`${id}-title`}>{title}</h2>
+                <p id={`${id}-description`} className="muted">
                     {description}
                 </p>
                 {children}
