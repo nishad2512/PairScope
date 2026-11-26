@@ -1,13 +1,7 @@
 import * as jwt from "jsonwebtoken";
-import z from "zod";
+import { accessTokenSchema } from "../validator/auth.validator";
 import { config } from "../config";
 import { RealtimeSocket } from "../types/events";
-
-const accessTokenSchema = z.object({
-    userId: z.uuid(),
-    sessionId: z.uuid().optional(),
-    exp: z.number().int().positive(),
-});
 
 export const socketAuthMiddleware = (
     socket: RealtimeSocket,

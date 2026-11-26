@@ -4,9 +4,10 @@ import Redis from "ioredis";
 import { createAdapter } from "@socket.io/redis-adapter";
 import { config } from "./config";
 import { socketAuthMiddleware } from "./middlewares/socketAuth.middleware";
-import { registerSessionHandlers } from "./handlers/session.handler";
+import { registerConnectionHandlers } from "./handlers/connection.handler";
 import { authorizeSession } from "./services/session-access";
-import { RedisState } from "./services/redis-state";
+import { RedisDocumentStore } from "./services/redis-documents";
+import { RedisConnectionLease } from "./services/redis-connections";
 import { publicError } from "./utils/errors";
 import { ClientEvents, ServerEvents, SocketData } from "./types/events";
 
@@ -34,7 +35,8 @@ export const initSocket = async (httpServer: HttpServer) => {
 
     let closing = false;
     const ready = () => !closing && pubClient.status === "ready" && subClient.status === "ready";
-    const state = new RedisState(pubClient);
+    const documents = new RedisDocumentStore(pubClient);
+    const connections = new RedisConnectionLease(pubClient);
     const io = new Server<ClientEvents, ServerEvents, Record<string, never>, SocketData>(
         httpServer,
         {
@@ -75,7 +77,7 @@ export const initSocket = async (httpServer: HttpServer) => {
             if (!ready()) {
                 throw new Error("Redis is unavailable");
             }
-            await state.reserve(socket.data.identity, socket.id);
+            await connections.reserve(socket.data.identity, socket.id);
             next();
         } catch (error) {
             const result = publicError(error);
@@ -86,48 +88,7 @@ export const initSocket = async (httpServer: HttpServer) => {
     });
 
     io.on("connection", (socket) => {
-        const expiration = setTimeout(
-            () => {
-                socket.emit("session:error", {
-                    code: "UNAUTHORIZED",
-                    message: "Your token has expired. Reconnect with a fresh token.",
-                });
-                socket.disconnect(true);
-            },
-            Math.max(0, socket.data.identity.expiresAt - Date.now()),
-        );
-
-        const heartbeat = setInterval(async () => {
-            try {
-                await state.reserve(socket.data.identity, socket.id);
-                const current = socket.data.membership;
-                if (current) {
-                    const access = await authorizeSession(current.sessionId, socket.data.identity);
-                    if (
-                        socket.connected &&
-                        socket.data.membership?.sessionId === current.sessionId
-                    ) {
-                        socket.data.membership = access;
-                        socket.data.authorizedAt = Date.now();
-                    }
-                }
-            } catch (error) {
-                socket.emit("session:error", publicError(error));
-                socket.conn.close();
-            }
-        }, 15_000);
-
-        expiration.unref();
-        heartbeat.unref();
-        registerSessionHandlers(io, socket, state, ready);
-
-        socket.on("disconnect", () => {
-            clearTimeout(expiration);
-            clearInterval(heartbeat);
-            state.release(socket.data.identity, socket.id).catch(() => {
-                // Redis expires the connection lease if cleanup fails.
-            });
-        });
+        registerConnectionHandlers(io, socket, documents, connections, authorizeSession, ready);
     });
 
     return {

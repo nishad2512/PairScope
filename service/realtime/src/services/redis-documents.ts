@@ -1,9 +1,10 @@
+import { DocumentStore } from "../interfaces/realtime.interface";
 import type Redis from "ioredis";
 import * as Y from "yjs";
 import { SocketError } from "../utils/errors";
-import type { DocumentState, Identity } from "../types/events";
+import type { DocumentState } from "../types/events";
+
 const DOCUMENT_TTL = 24 * 60 * 60;
-const LEASE_MS = 45_000;
 const MAX_DOCUMENT_BYTES = 512 * 1024;
 // Save only if the revision is unchanged; retry when another worker edited first.
 const writeDocument = `
@@ -12,14 +13,9 @@ if revision ~= tonumber(ARGV[1]) then return 0 end
 redis.call('HSET', KEYS[1], 'revision', revision + 1, 'update', ARGV[2])
 redis.call('EXPIRE', KEYS[1], ARGV[3])
 return revision + 1`;
-const reserveConnection = `
-redis.call('ZREMRANGEBYSCORE', KEYS[1], '-inf', ARGV[1])
-if not redis.call('ZSCORE', KEYS[1], ARGV[2]) and redis.call('ZCARD', KEYS[1]) >= 5 then return 0 end
-redis.call('ZADD', KEYS[1], ARGV[3], ARGV[2])
-redis.call('PEXPIRE', KEYS[1], ARGV[4])
-return 1`;
-export class RedisState {
+export class RedisDocumentStore implements DocumentStore {
     constructor(private readonly redis: Redis) {}
+
     async document(sessionId: string): Promise<DocumentState> {
         const [revision, update] = await this.redis.hmget(
             `rt:document:${sessionId}`,
@@ -31,6 +27,7 @@ export class RedisState {
             update: update ? Buffer.from(update, "base64") : Buffer.from([0, 0]),
         };
     }
+
     async apply(sessionId: string, update: Uint8Array): Promise<number> {
         for (let attempt = 0; attempt < 16; attempt++) {
             const current = await this.document(sessionId);
@@ -71,29 +68,5 @@ export class RedisState {
             "SERVICE_UNAVAILABLE",
             "The document is busy. Please retry the update.",
         );
-    }
-    private connectionKey(identity: Identity) {
-        return `rt:connections:${identity.sessionId ? "guest" : "user"}:${identity.userId}`;
-    }
-    async reserve(identity: Identity, socketId: string): Promise<void> {
-        const now = Date.now();
-        const reserved = await this.redis.eval(
-            reserveConnection,
-            1,
-            this.connectionKey(identity),
-            now,
-            socketId,
-            now + LEASE_MS,
-            LEASE_MS,
-        );
-        if (!reserved) {
-            throw new SocketError(
-                "RATE_LIMITED",
-                "At most five realtime connections are allowed per identity.",
-            );
-        }
-    }
-    async release(identity: Identity, socketId: string): Promise<void> {
-        await this.redis.zrem(this.connectionKey(identity), socketId);
     }
 }

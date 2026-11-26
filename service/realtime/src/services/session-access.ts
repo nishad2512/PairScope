@@ -1,20 +1,7 @@
-import z from "zod";
+import { accessResponseSchema } from "../validator/access.validator";
 import { config } from "../config";
 import { Identity, SessionAccess } from "../types/events";
 import { SocketError } from "../utils/errors";
-
-const accessSchema = z.object({
-    sessionId: z.uuid(),
-    language: z.string().min(1),
-    status: z.enum(["live", "scheduled"]),
-    expiresAt: z.iso.datetime().nullable(),
-    participant: z.object({
-        id: z.uuid(),
-        userId: z.uuid().nullable(),
-        displayName: z.string(),
-        role: z.enum(["OWNER", "INTERVIEWER", "CANDIDATE", "COLLABORATOR", "OBSERVER"]),
-    }),
-});
 
 export const authorizeSession = async (
     sessionId: string,
@@ -56,7 +43,7 @@ export const authorizeSession = async (
         );
     }
 
-    const result = z.object({ data: accessSchema }).parse(await response.json()).data;
+    const result = accessResponseSchema.parse(await response.json()).data;
     if (
         result.sessionId !== sessionId ||
         (identity.sessionId
