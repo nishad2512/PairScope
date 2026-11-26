@@ -13,6 +13,5 @@ ENV NODE_ENV=production
 COPY service/notification-service/package*.json ./
 RUN npm ci --omit=dev
 COPY --from=builder /app/dist ./dist
-COPY service/notification-service/migrations ./migrations
 USER node
 CMD ["npm", "start"]

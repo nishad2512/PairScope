@@ -1,5 +1,4 @@
 RABBITMQ_URL=amqp://notification:local-notification-password@localhost:5673
-DATABASE_URL=postgresql://notification:local-notification-password@localhost:5434/notification
 FRONTEND_URL=http://localhost:5173
 EMAIL_FROM=notifications@pairscope.local
 SMTP_HOST=localhost
@@ -10,5 +9,4 @@ SMTP_REQUIRE_TLS=false
 # SMTP_PASSWORD=
 EMAIL_PREFETCH=5
 EMAIL_RETRY_DELAYS_MS=10000,60000,300000
-DELIVERY_LEASE_MS=180000
 SHUTDOWN_TIMEOUT_MS=30000

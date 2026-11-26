@@ -1,6 +1,5 @@
 import { setTimeout } from "node:timers/promises";
 import { config } from "./config/env";
-import { db } from "./config/db";
 import { runEmailWorker } from "./messaging/worker";
 
 const shutdown = new AbortController();
@@ -19,7 +18,7 @@ async function start(): Promise<void> {
     try {
         while (!shutdown.signal.aborted) {
             try {
-                await runEmailWorker(db, shutdown.signal);
+                await runEmailWorker(shutdown.signal);
                 delay = 1000;
             } catch {
                 console.error(JSON.stringify({ action: "email.worker.unavailable", retryInMs: delay }));
@@ -29,7 +28,6 @@ async function start(): Promise<void> {
             delay = Math.min(delay * 2, 30000);
         }
     } finally {
-        await db.end();
         if (deadline) clearTimeout(deadline);
     }
 }

@@ -1,14 +1,12 @@
 import { connect, ChannelModel } from "amqplib";
-import { Pool } from "pg";
 import { config } from "../config/env";
 import { EmailConsumer } from "../consumers/email.consumer";
 import { SmtpProvider } from "../providers/smtp.provider";
-import { PostgresDeliveryRepository } from "../repositories/delivery.repository";
 import { EmailService } from "../services/email.service";
 import { ConfirmedPublisher } from "./publisher";
 import { declareTopology } from "./topology";
 
-export async function runEmailWorker(db: Pool, signal: AbortSignal): Promise<void> {
+export async function runEmailWorker(signal: AbortSignal): Promise<void> {
     let connection: ChannelModel | undefined;
     let consumer: EmailConsumer | undefined;
     const provider = new SmtpProvider({
@@ -34,7 +32,6 @@ export async function runEmailWorker(db: Pool, signal: AbortSignal): Promise<voi
     };
 
     try {
-        await db.query("SELECT event_id, event_hash, lease_id FROM email_deliveries LIMIT 0");
         if (signal.aborted) return;
         const brokerUrl = new URL(config.RABBITMQ_URL);
         brokerUrl.searchParams.set("heartbeat", "15");
@@ -51,8 +48,7 @@ export async function runEmailWorker(db: Pool, signal: AbortSignal): Promise<voi
             channel.on("close", close);
         }
         await declareTopology(publisherChannel, config.EMAIL_RETRY_DELAYS_MS);
-        const deliveries = new PostgresDeliveryRepository(db, config.DELIVERY_LEASE_MS);
-        const email = new EmailService(provider, deliveries, config.FRONTEND_URL);
+        const email = new EmailService(provider, config.FRONTEND_URL);
         consumer = new EmailConsumer(
             consumerChannel,
             new ConfirmedPublisher(publisherChannel),

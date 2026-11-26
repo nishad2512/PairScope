@@ -1,13 +1,12 @@
 {
   "name": "notification-service",
   "version": "1.0.0",
-  "description": "Notification service to manage and handle on-app, and outgoing notifications, and emails.",
+  "description": "Email delivery service with RabbitMQ retries and dead letters.",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js",
-    "migrate": "node dist/migrate.js"
+    "start": "node dist/server.js"
   },
   "keywords": [],
   "author": "Nishad MP",
@@ -16,13 +15,11 @@
     "amqplib": "^2.4.2",
     "dotenv": "^18.0.10",
     "nodemailer": "^10.6.1",
-    "pg": "^8.23.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/node": "^26.6.11",
     "@types/nodemailer": "^8.0.2",
-    "@types/pg": "^8.23.1",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   }

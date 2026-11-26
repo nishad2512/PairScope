@@ -1,4 +1,4 @@
-# Email notifications
+# Email delivery
 
 Email-only RabbitMQ worker. No public HTTP endpoint or in-app notification delivery is added. Session and organization services retain invitation creation, permissions, acceptance, and token ownership.
 
@@ -10,12 +10,11 @@ From this directory:
 docker compose up -d --build
 ```
 
-This starts an isolated development stack with PostgreSQL, RabbitMQ, Mailpit, and this worker. It does not change the root application's Compose stack.
+This starts an isolated development stack with RabbitMQ, Mailpit, and this worker. It does not change the root application's Compose stack.
 
 - RabbitMQ management: http://localhost:15673 (user `notification`, password `local-notification-password`)
 - Mailpit inbox: http://localhost:8026
 - RabbitMQ AMQP: localhost:5673
-- PostgreSQL: localhost:5434
 - SMTP capture: localhost:1026
 
 The Compose credentials are development-only. Ports bind to loopback. Mailpit captures email instead of sending to real recipients.
@@ -23,15 +22,14 @@ The Compose credentials are development-only. Ports bind to loopback. Mailpit ca
 To run the worker on the host instead:
 
 ```sh
-docker compose up -d rabbitmq postgres mailpit
+docker compose up -d rabbitmq mailpit
 cp config.example .env
 npm ci
 npm run build
-npm run migrate
 npm start
 ```
 
-The fresh Compose PostgreSQL volume applies `migrations/001_email_deliveries.sql` automatically. For an existing database, create a dedicated notification database and run the migration explicitly. The worker does not create or alter tables on startup.
+No database is required. RabbitMQ stores pending delivery work; this service does not create notification records or an inbox.
 
 For a real SMTP provider, set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, and `EMAIL_FROM`. Use `SMTP_SECURE=true` for implicit TLS (commonly port 465), or `SMTP_SECURE=false` and `SMTP_REQUIRE_TLS=true` for STARTTLS (commonly port 587). The example disables required TLS only for local Mailpit.
 
@@ -83,26 +81,26 @@ Example session invitation:
 
 Use current timestamps when trying this example. For organization invitations, change the type to `organization.invitation.created.v1` and replace `sessionId`/`sessionTitle` with `organizationId`/`organizationName`. The producer supplies the real acceptance URL; this service does not implement organization invitation acceptance.
 
-For other text emails, publish `email.requested.v1` with the same envelope and data containing `recipientEmail`, `subject`, `text`, and `expiresAt`. Attachments and arbitrary HTML are intentionally unsupported. Invitation links must match `FRONTEND_URL`'s origin. All events require an expiry; expired events are recorded as skipped and acknowledged.
+For other text emails, publish `email.requested.v1` with the same envelope and data containing `recipientEmail`, `subject`, `text`, and `expiresAt`. Attachments and arbitrary HTML are intentionally unsupported. Invitation links must match `FRONTEND_URL`'s origin. All events require an expiry; expired events are skipped and acknowledged.
 
 Use a stable `eventId` for redelivery. A deliberate resend is a new event ID. Producers must supply the original invitation URL securely: hashed tokens cannot reconstruct it.
 
 ## Delivery and failure behavior
 
-- Consumers acknowledge only after SMTP acceptance and the delivery record is saved, or after a confirmed retry/DLQ transfer.
-- PostgreSQL records completed event IDs, detects conflicting payloads, and leases in-flight work to avoid normal duplicate sends across workers. A lease is checked against a unique claim ID when completing work.
+- Consumers acknowledge only after SMTP acceptance, or after a confirmed retry/DLQ transfer.
+- Delivery is at least once. There is no database or durable sent-message deduplication. Producers should use stable event IDs for tracing; SMTP may accept duplicates after ambiguous failures.
 - Invalid events, unexpected invitation URL origins, and permanent SMTP failures go directly to the DLQ.
-- SMTP connection errors, rate limits, temporary failures, and database problems use bounded retries. Authentication errors are flagged `SMTP_AUTH_FAILED` and eventually reach the DLQ; alert on this code and fix configuration.
+- SMTP connection errors, rate limits, temporary failures, and other temporary failures use bounded retries. Authentication errors are flagged `SMTP_AUTH_FAILED` and eventually reach the DLQ; alert on this code and fix configuration.
 - Retry transfers use a separate publisher-confirm channel. Unroutable transfers, channel failures, or confirm timeouts close the connection without acknowledging the original. RabbitMQ redelivers after recovery.
 - Reconnection redeclares topology and recreates consumers with backoff. Shutdown cancels consumption and drains in-flight work before closing connections, with a bounded process shutdown deadline.
 - Logs contain event IDs, statuses, and safe error codes, not email bodies, recipient addresses, invitation URLs, SMTP responses, or credentials.
 
-SMTP acceptance is not inbox delivery. This service does not yet consume delivery/bounce webhooks. SMTP also has no atomic transaction with PostgreSQL: if a worker crashes after SMTP accepts an email but before completion is stored, a duplicate remains possible. The stable Message-ID aids tracing but is not a provider idempotency guarantee.
+SMTP acceptance is not inbox delivery. This service does not yet consume delivery/bounce webhooks. SMTP acceptance and RabbitMQ acknowledgement are separate operations: if a worker crashes between them, a duplicate remains possible. The stable Message-ID aids tracing but is not a provider idempotency guarantee.
 
-Inspect and correct DLQ failures before controlled replay. Retry metadata is application-owned (`x-retry-attempt`); reset it deliberately for a replay and preserve the original event ID to retain deduplication. Do not replay expired or revoked invitations blindly; revocation remains owned by the invitation service and is not queried by this worker.
+Inspect and correct DLQ failures before controlled replay. Retry metadata is application-owned (`x-retry-attempt`); reset it deliberately for a replay and preserve the original event ID for tracing. Do not replay expired or revoked invitations blindly; revocation remains owned by the invitation service and is not queried by this worker.
 
 ## Operations
 
-Use dedicated production broker users/vhosts, least-privilege permissions, AMQPS, protected database credentials, and a verified sender domain. Publishers should have no consumer or management permissions. The notification worker requires topology configuration and delivery queue permissions.
+Use dedicated production broker users/vhosts, least-privilege permissions, AMQPS, a verified sender domain. Publishers should have no consumer or management permissions. The notification worker requires topology configuration and delivery queue permissions.
 
-Monitor queue age/depth, DLQ depth, retry codes, worker readiness logs, database availability, SMTP rejection rates, and RabbitMQ disk/memory alarms. Queue contents and the DLQ can contain invitation URLs and recipient data; restrict access and define retention/cleanup policies. Delivery records also contain recipient data; retain them for at least the full redelivery/replay window before controlled cleanup.
+Monitor queue age/depth, DLQ depth, retry codes, worker readiness logs, SMTP rejection rates, and RabbitMQ disk/memory alarms. Queue contents and the DLQ can contain invitation URLs and recipient data; restrict access and define retention/cleanup policies.
