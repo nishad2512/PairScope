@@ -12,7 +12,7 @@ export interface EmailProvider {
 }
 
 export interface DeliveryRepository {
-    claim(event: EmailEvent): Promise<"claimed" | "completed" | "busy">;
-    complete(eventId: string, status: "sent" | "skipped"): Promise<void>;
-    release(eventId: string): Promise<void>;
+    claim(event: EmailEvent, leaseId: string): Promise<"claimed" | "completed" | "busy">;
+    complete(eventId: string, leaseId: string, status: "sent" | "skipped"): Promise<void>;
+    release(eventId: string, leaseId: string): Promise<void>;
 }
