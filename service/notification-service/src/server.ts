@@ -1,38 +1,72 @@
-import { setTimeout } from "node:timers/promises";
+import { once } from "node:events";
+import { setTimeout as delay } from "node:timers/promises";
+import { ChannelModel, connect } from "amqplib";
 import { config } from "./config/env";
-import { runEmailWorker } from "./messaging/worker";
+import { EmailConsumer } from "./consumers/email.consumer";
+import { SmtpProvider } from "./providers/smtp.provider";
+import { EmailService } from "./services/email.service";
+import { declareTopology } from "./messaging/topology";
 
-const shutdown = new AbortController();
-let deadline: NodeJS.Timeout | undefined;
+let stopping = false;
+let connection: ChannelModel | undefined;
+let consumer: EmailConsumer | undefined;
 
-for (const signal of ["SIGINT", "SIGTERM"] as const) {
-    process.once(signal, () => {
-        shutdown.abort();
-        deadline = global.setTimeout(() => process.exit(1), config.SHUTDOWN_TIMEOUT_MS + 5000);
-        deadline.unref();
-    });
+async function stop(): Promise<void> {
+    stopping = true;
+    const timeout = setTimeout(() => process.exit(1), config.SHUTDOWN_TIMEOUT_MS);
+    timeout.unref();
+    await consumer?.stop();
+    await connection?.close().catch(() => {});
 }
 
+process.once("SIGINT", () => void stop());
+process.once("SIGTERM", () => void stop());
+
 async function start(): Promise<void> {
-    let delay = 1000;
-    try {
-        while (!shutdown.signal.aborted) {
-            try {
-                await runEmailWorker(shutdown.signal);
-                delay = 1000;
-            } catch {
-                console.error(JSON.stringify({ action: "email.worker.unavailable", retryInMs: delay }));
+    const provider = new SmtpProvider({
+        host: config.SMTP_HOST,
+        port: config.SMTP_PORT,
+        secure: config.SMTP_SECURE,
+        requireTLS: config.SMTP_REQUIRE_TLS,
+        user: config.SMTP_USER,
+        password: config.SMTP_PASSWORD,
+        from: config.EMAIL_FROM,
+    });
+    const email = new EmailService(provider, config.FRONTEND_URL);
+
+    while (!stopping) {
+        try {
+            connection = await connect(config.RABBITMQ_URL, { timeout: 10000 });
+            connection.on("error", () => console.error("RabbitMQ connection failed"));
+            const disconnected = once(connection, "close").catch(() => {});
+            const publisher = await connection.createConfirmChannel();
+            const channel = await connection.createChannel();
+            const currentConnection = connection;
+            const close = () => void currentConnection.close().catch(() => {});
+            for (const item of [publisher, channel]) {
+                item.on("error", close);
+                item.on("close", close);
             }
-            if (shutdown.signal.aborted) break;
-            await setTimeout(delay, undefined, { signal: shutdown.signal }).catch(() => {});
-            delay = Math.min(delay * 2, 30000);
+            await declareTopology(publisher, config.EMAIL_RETRY_DELAYS_MS);
+            consumer = new EmailConsumer(channel, publisher, email, config.EMAIL_RETRY_DELAYS_MS, close);
+            if (stopping) break;
+            await consumer.start();
+            console.info("Email service is listening");
+            await disconnected;
+        } catch {
+            if (!stopping) console.error("Email service unavailable. Reconnecting in 5 seconds.");
+        } finally {
+            await consumer?.stop();
+            await connection?.close().catch(() => {});
+            consumer = undefined;
+            connection = undefined;
         }
-    } finally {
-        if (deadline) clearTimeout(deadline);
+        if (!stopping) await delay(5000);
     }
+    provider.close();
 }
 
 void start().catch(() => {
-    console.error(JSON.stringify({ action: "email.worker.stopped" }));
+    console.error("Email service stopped unexpectedly");
     process.exitCode = 1;
 });

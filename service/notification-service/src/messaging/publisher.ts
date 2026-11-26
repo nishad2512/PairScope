@@ -1,51 +1,40 @@
-import { randomUUID } from "node:crypto";
-import { ConfirmChannel, Message, Options } from "amqplib";
+import { ConfirmChannel } from "amqplib";
 
-export class ConfirmedPublisher {
-    private readonly pending = new Map<string, { reject: (error: Error) => void; timer: NodeJS.Timeout }>();
+// The email consumer sends one message at a time through this channel.
+export function publishEmail(
+    channel: ConfirmChannel,
+    exchange: string,
+    routingKey: string,
+    content: Buffer,
+    attempt: number,
+    failure: string,
+): Promise<void> {
+    return new Promise((resolve, reject) => {
+        const finish = (error?: Error | null) => {
+            clearTimeout(timeout);
+            channel.off("return", returned);
+            channel.off("close", closed);
+            if (error) reject(error);
+            else resolve();
+        };
+        const returned = () => finish(new Error("Email message could not be routed"));
+        const closed = () => finish(new Error("Email publisher channel closed"));
+        const timeout = setTimeout(() => {
+            finish(new Error("Email publisher confirmation timed out"));
+            void channel.close().catch(() => {});
+        }, 10000);
 
-    constructor(private readonly channel: ConfirmChannel) {
-        channel.on("return", (message: Message) => {
-            this.pending.get(message.properties.messageId)?.reject(new Error("UNROUTABLE_MESSAGE"));
-        });
-        channel.on("close", () => {
-            for (const item of this.pending.values()) {
-                clearTimeout(item.timer);
-                item.reject(new Error("PUBLISH_CHANNEL_CLOSED"));
-            }
-            this.pending.clear();
-        });
-    }
-
-    publish(exchange: string, routingKey: string, content: Buffer, properties: Options.Publish = {}): Promise<void> {
-        const messageId = randomUUID();
-        return new Promise((resolve, reject) => {
-            const finish = (error?: Error | null) => {
-                const item = this.pending.get(messageId);
-                if (!item) return;
-                clearTimeout(item.timer);
-                this.pending.delete(messageId);
-                if (error) reject(error);
-                else resolve();
-            };
-            const timer = setTimeout(() => {
-                finish(new Error("PUBLISH_CONFIRM_TIMEOUT"));
-                void this.channel.close().catch(() => {});
-            }, 10000);
-            this.pending.set(messageId, { reject: finish, timer });
-            try {
-                this.channel.publish(exchange, routingKey, content, {
-                    ...properties,
-                    messageId,
-                    persistent: true,
-                    mandatory: true,
-                    expiration: undefined,
-                    userId: undefined,
-                    replyTo: undefined,
-                }, finish);
-            } catch {
-                finish(new Error("PUBLISH_FAILED"));
-            }
-        });
-    }
+        channel.once("return", returned);
+        channel.once("close", closed);
+        try {
+            channel.publish(exchange, routingKey, content, {
+                persistent: true,
+                mandatory: true,
+                contentType: "application/json",
+                headers: { "x-retry-attempt": attempt, "x-failure-code": failure },
+            }, finish);
+        } catch {
+            finish(new Error("Email publication failed"));
+        }
+    });
 }

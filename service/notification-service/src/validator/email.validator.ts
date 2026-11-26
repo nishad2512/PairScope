@@ -1,4 +1,5 @@
 import z from "zod";
+import { EmailError } from "../utils/email-error";
 
 const envelope = {
     eventId: z.uuid(),
@@ -36,3 +37,16 @@ export const emailEventSchema = z.discriminatedUnion("type", [
 ]);
 
 export type EmailEvent = z.infer<typeof emailEventSchema>;
+
+export function parseEmailEvent(content: Buffer): EmailEvent {
+    if (content.length > 64 * 1024) throw new EmailError("MESSAGE_TOO_LARGE");
+    let payload: unknown;
+    try {
+        payload = JSON.parse(content.toString("utf8"));
+    } catch {
+        throw new EmailError("INVALID_JSON");
+    }
+    const result = emailEventSchema.safeParse(payload);
+    if (!result.success) throw new EmailError("INVALID_EVENT");
+    return result.data;
+}
